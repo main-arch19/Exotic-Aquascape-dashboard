@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Droplets, PlusCircle, MapPin, Clock, User, Users, Loader2, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Droplets, PlusCircle, MapPin, Clock, User, Users, Loader2, CheckCircle2, ChevronDown, ChevronUp, BarChart2 } from 'lucide-react';
 import { CEOView } from '@/components/dashboard/CEOView';
 import { ManagerView } from '@/components/dashboard/ManagerView';
 import { TimesheetView } from '@/components/dashboard/TimesheetView';
 import { DashboardProvider, useDashboard } from '@/context/DashboardContext';
+import { RevenueDashboard } from '@/components/dashboard/RevenueDashboard';
 
 type Tab = 'ceo' | 'manager' | 'timesheet';
 
@@ -188,6 +189,32 @@ function QuickJobBar() {
   );
 }
 
+function RevenueBar() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mb-6 rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50"
+      >
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-600">
+          <BarChart2 className="h-4 w-4 text-white" />
+        </div>
+        <span className="text-sm font-semibold text-gray-700">Revenue Calculation Dashboard</span>
+        <span className="ml-auto text-gray-400">
+          {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </span>
+      </button>
+      {open && (
+        <div className="border-t border-gray-100">
+          <RevenueDashboard />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DashboardInner() {
   const [activeTab, setActiveTab] = useState<Tab>('ceo');
 
@@ -248,6 +275,7 @@ function DashboardInner() {
         </div>
 
         <QuickJobBar />
+        {activeTab === 'ceo' && <RevenueBar />}
 
         {activeTab === 'ceo' && <CEOView />}
         {activeTab === 'manager' && <ManagerView />}
