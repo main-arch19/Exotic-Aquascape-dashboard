@@ -1,14 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { Droplets, PlusCircle, MapPin, Clock, User, Users, Loader2, CheckCircle2, ChevronDown, ChevronUp, BarChart2 } from 'lucide-react';
+import { Droplets, PlusCircle, MapPin, Clock, User, Users, Loader2, CheckCircle2, ChevronDown, ChevronUp, BarChart2, CalendarClock } from 'lucide-react';
 import { CEOView } from '@/components/dashboard/CEOView';
 import { ManagerView } from '@/components/dashboard/ManagerView';
 import { TimesheetView } from '@/components/dashboard/TimesheetView';
 import { DashboardProvider, useDashboard } from '@/context/DashboardContext';
 import { RevenueDashboard } from '@/components/dashboard/RevenueDashboard';
+import { JobScheduler } from '@/components/dashboard/JobScheduler';
 
-type Tab = 'ceo' | 'manager' | 'timesheet';
+type Tab = 'ceo' | 'manager' | 'timesheet' | 'scheduler';
 
 const MANAGERS = [
   { id: 'w6', name: 'Sofia Morales' },
@@ -271,15 +272,28 @@ function DashboardInner() {
             >
               Timesheets
             </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('scheduler')}
+              className={`flex items-center gap-1.5 rounded-md px-5 py-1.5 text-sm font-medium transition-colors ${
+                activeTab === 'scheduler'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-gray-500 hover:text-gray-800'
+              }`}
+            >
+              <CalendarClock className="h-3.5 w-3.5" />
+              Job Scheduler
+            </button>
           </div>
         </div>
 
         <QuickJobBar />
-        {activeTab === 'ceo' && <RevenueBar />}
+        {(activeTab === 'ceo' || activeTab === 'scheduler') && <RevenueBar />}
 
         {activeTab === 'ceo' && <CEOView />}
         {activeTab === 'manager' && <ManagerView />}
         {activeTab === 'timesheet' && <TimesheetView />}
+        {activeTab === 'scheduler' && <JobScheduler />}
       </main>
 
       <footer className="border-t border-gray-200 py-4 text-center text-xs text-gray-400">
