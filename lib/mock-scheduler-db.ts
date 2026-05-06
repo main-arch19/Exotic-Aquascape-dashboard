@@ -1,5 +1,11 @@
 export type SchedulerStatus = 'running' | 'completed' | 'failed' | 'queued' | 'sla_at_risk';
 export type ScheduleType = 'recurring' | 'one_time' | 'event_triggered';
+export type PaymentStatus =
+  | 'deposit_pending'
+  | 'deposit_paid'
+  | 'invoice_sent'
+  | 'invoice_overdue'
+  | 'paid_in_full';
 export type ServiceType =
   | 'Installation'
   | 'Maintenance'
@@ -34,6 +40,7 @@ export interface SchedulerJob {
   createdAt: Date;
   dependsOn: string[];
   runHistory: RunRecord[];
+  paymentStatus: PaymentStatus;
 }
 
 export interface SchedulerWorkflow {
@@ -122,6 +129,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(72),
     dependsOn: [],
     runHistory: runs(hAgo(8), 6, 90, 90, DELIVERY_LOGS),
+    paymentStatus: 'paid_in_full',
   },
   {
     id: 'tank_install_coral_springs',
@@ -141,6 +149,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(72),
     dependsOn: ['equip_delivery_palmetto'],
     runHistory: runs(hAgo(0.5), 4, 210, 88, CORAL_LOGS),
+    paymentStatus: 'deposit_paid',
   },
   {
     id: 'water_test_coral_springs',
@@ -160,6 +169,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(72),
     dependsOn: ['tank_install_coral_springs'],
     runHistory: [],
+    paymentStatus: 'deposit_paid',
   },
   {
     id: 'client_walkthrough_coral_springs',
@@ -179,6 +189,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(72),
     dependsOn: ['water_test_coral_springs'],
     runHistory: [],
+    paymentStatus: 'deposit_pending',
   },
 
   // ── DEPENDENCY CHAIN 2: Ocean Dr Emergency Repair ──
@@ -200,6 +211,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(20),
     dependsOn: [],
     runHistory: runs(hAgo(18), 5, 75, 92, EMERGENCY_LOGS),
+    paymentStatus: 'paid_in_full',
   },
   {
     id: 'water_test_ocean_followup',
@@ -219,6 +231,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(20),
     dependsOn: ['emergency_leak_ocean'],
     runHistory: runs(hAgo(0.25), 3, 25, 95, WATER_TEST_LOGS),
+    paymentStatus: 'deposit_paid',
   },
 
   // ── DEPENDENCY CHAIN 3: Blue Lagoon Weekly Cycle ──
@@ -240,6 +253,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(365),
     dependsOn: [],
     runHistory: runs(hAgo(48), 8, 60, 94, MAINT_LOGS),
+    paymentStatus: 'paid_in_full',
   },
   {
     id: 'water_test_blue_lagoon',
@@ -259,6 +273,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(365),
     dependsOn: ['weekly_maint_blue_lagoon'],
     runHistory: runs(hAgo(46), 8, 25, 97, WATER_TEST_LOGS),
+    paymentStatus: 'paid_in_full',
   },
   {
     id: 'report_blue_lagoon',
@@ -278,6 +293,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(365),
     dependsOn: ['water_test_blue_lagoon'],
     runHistory: runs(hAgo(720), 5, 30, 78, MAINT_LOGS),
+    paymentStatus: 'invoice_sent',
   },
 
   // ── DEPENDENCY CHAIN 4: Tide Pool Deep Clean ──
@@ -308,6 +324,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
       },
       ...runs(hAgo(168), 5, 55, 70, ALGAE_LOGS),
     ],
+    paymentStatus: 'invoice_overdue',
   },
   {
     id: 'deep_clean_tide_pool',
@@ -327,6 +344,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(180),
     dependsOn: ['algae_treatment_tide_pool'],
     runHistory: runs(hAgo(672), 4, 120, 83, DEEP_CLEAN_LOGS),
+    paymentStatus: 'deposit_pending',
   },
 
   // ── STANDALONE RECURRING JOBS ──
@@ -348,6 +366,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(400),
     dependsOn: [],
     runHistory: runs(hAgo(24), 9, 60, 96, MAINT_LOGS),
+    paymentStatus: 'paid_in_full',
   },
   {
     id: 'water_test_coral_reef',
@@ -367,6 +386,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(400),
     dependsOn: [],
     runHistory: runs(hAgo(22), 9, 25, 98, WATER_TEST_LOGS),
+    paymentStatus: 'paid_in_full',
   },
   {
     id: 'filter_replacement_tide_pool',
@@ -386,6 +406,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(300),
     dependsOn: [],
     runHistory: runs(hAgo(96), 7, 40, 91, MAINT_LOGS),
+    paymentStatus: 'paid_in_full',
   },
   {
     id: 'weekly_maint_ocean_dr',
@@ -405,6 +426,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(500),
     dependsOn: [],
     runHistory: runs(hAgo(72), 8, 65, 93, MAINT_LOGS),
+    paymentStatus: 'paid_in_full',
   },
   {
     id: 'substrate_replacement_mangrove',
@@ -424,6 +446,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(50),
     dependsOn: [],
     runHistory: runs(hAgo(36), 3, 150, 85, CORAL_LOGS),
+    paymentStatus: 'paid_in_full',
   },
   {
     id: 'algae_treatment_boca',
@@ -443,6 +466,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(200),
     dependsOn: [],
     runHistory: runs(hAgo(60), 7, 50, 88, ALGAE_LOGS),
+    paymentStatus: 'paid_in_full',
   },
   {
     id: 'water_test_mangrove',
@@ -462,6 +486,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(200),
     dependsOn: [],
     runHistory: runs(hAgo(58), 7, 25, 96, WATER_TEST_LOGS),
+    paymentStatus: 'paid_in_full',
   },
   {
     id: 'deep_clean_sailfish',
@@ -481,6 +506,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(300),
     dependsOn: [],
     runHistory: runs(hAgo(480), 6, 120, 90, DEEP_CLEAN_LOGS),
+    paymentStatus: 'paid_in_full',
   },
   {
     id: 'equip_delivery_key_largo',
@@ -509,6 +535,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
       },
       ...runs(hAgo(240), 4, 85, 67, DELIVERY_LOGS),
     ],
+    paymentStatus: 'invoice_overdue',
   },
   {
     id: 'tank_install_coral_reef',
@@ -528,6 +555,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(200),
     dependsOn: [],
     runHistory: runs(hAgo(168), 5, 210, 88, CORAL_LOGS),
+    paymentStatus: 'paid_in_full',
   },
   {
     id: 'weekly_maint_sailfish',
@@ -547,6 +575,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(350),
     dependsOn: [],
     runHistory: runs(hAgo(96), 8, 60, 92, MAINT_LOGS),
+    paymentStatus: 'paid_in_full',
   },
   {
     id: 'water_test_palmetto',
@@ -566,6 +595,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(300),
     dependsOn: [],
     runHistory: runs(hAgo(0.5), 7, 25, 94, WATER_TEST_LOGS),
+    paymentStatus: 'deposit_paid',
   },
   {
     id: 'deep_clean_blue_lagoon',
@@ -585,6 +615,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(400),
     dependsOn: [],
     runHistory: runs(hAgo(360), 6, 120, 87, DEEP_CLEAN_LOGS),
+    paymentStatus: 'paid_in_full',
   },
   {
     id: 'algae_treatment_mangrove',
@@ -604,6 +635,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(250),
     dependsOn: [],
     runHistory: runs(hAgo(120), 6, 50, 84, ALGAE_LOGS),
+    paymentStatus: 'paid_in_full',
   },
   {
     id: 'filter_replacement_ocean',
@@ -623,6 +655,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(350),
     dependsOn: [],
     runHistory: runs(hAgo(240), 7, 40, 93, MAINT_LOGS),
+    paymentStatus: 'paid_in_full',
   },
   {
     id: 'emergency_repair_palmetto',
@@ -651,6 +684,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
       },
       ...runs(hAgo(500), 4, 90, 75, EMERGENCY_LOGS),
     ],
+    paymentStatus: 'invoice_overdue',
   },
   {
     id: 'weekly_maint_mangrove',
@@ -670,6 +704,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(450),
     dependsOn: [],
     runHistory: runs(hAgo(0.75), 8, 60, 90, MAINT_LOGS),
+    paymentStatus: 'deposit_paid',
   },
   {
     id: 'water_test_sailfish',
@@ -689,6 +724,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(350),
     dependsOn: [],
     runHistory: runs(hAgo(90), 8, 25, 97, WATER_TEST_LOGS),
+    paymentStatus: 'paid_in_full',
   },
   {
     id: 'deep_clean_ocean',
@@ -708,6 +744,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(500),
     dependsOn: [],
     runHistory: runs(hAgo(600), 6, 120, 91, DEEP_CLEAN_LOGS),
+    paymentStatus: 'paid_in_full',
   },
   {
     id: 'weekly_maint_palmetto',
@@ -727,6 +764,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(400),
     dependsOn: [],
     runHistory: runs(hAgo(144), 8, 60, 92, MAINT_LOGS),
+    paymentStatus: 'paid_in_full',
   },
   {
     id: 'substrate_replacement_coral_reef',
@@ -746,6 +784,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(340),
     dependsOn: [],
     runHistory: runs(hAgo(336), 4, 150, 86, CORAL_LOGS),
+    paymentStatus: 'paid_in_full',
   },
   {
     id: 'water_test_mangrove_monthly',
@@ -765,6 +804,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(400),
     dependsOn: [],
     runHistory: runs(hAgo(384), 6, 25, 95, WATER_TEST_LOGS),
+    paymentStatus: 'paid_in_full',
   },
   {
     id: 'equip_delivery_ocean',
@@ -784,6 +824,7 @@ export const SCHEDULER_JOBS: SchedulerJob[] = [
     createdAt: hAgo(5),
     dependsOn: [],
     runHistory: runs(hAgo(1), 3, 85, 80, DELIVERY_LOGS),
+    paymentStatus: 'deposit_paid',
   },
 ];
 

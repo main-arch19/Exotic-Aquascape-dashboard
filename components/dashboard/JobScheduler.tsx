@@ -5,7 +5,7 @@ import {
   AlertCircle, X, Bell, Search, Play, RotateCcw, Pause, SkipForward, Edit2,
   ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Copy, Check,
   Zap, CheckCircle, XCircle, Clock, AlertTriangle, Calendar, ArrowRight,
-  Activity, Users, MapPin, Tag, Info, Radio,
+  Activity, Users, MapPin, Tag, Info, Radio, CreditCard, Lock, OctagonX,
 } from 'lucide-react';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -24,7 +24,7 @@ import type { Job, JobStatus } from '@/lib/types';
 import {
   SCHEDULER_JOBS, SCHEDULER_WORKFLOWS,
   getSchedulerStats, formatDuration, formatRelative, formatRelativeFuture,
-  type SchedulerJob, type SchedulerStatus, type ScheduleType, type ServiceType,
+  type SchedulerJob, type SchedulerStatus, type ScheduleType, type ServiceType, type PaymentStatus,
 } from '@/lib/mock-scheduler-db';
 
 const NOW = new Date('2026-05-05T10:30:00');
@@ -82,7 +82,8 @@ function mapJobToSchedulerJob(job: Job): SchedulerJob {
     avgDuration:  60,
     successRate:  100,
     createdAt:    createdDate,
-    dependsOn:    [],
+    dependsOn:     [],
+    paymentStatus: 'deposit_pending',
     runHistory:
       status === 'completed'
         ? [{
@@ -107,6 +108,18 @@ function statusBadge(status: SchedulerStatus) {
     case 'sla_at_risk': return <Badge className="border-0 bg-amber-100 text-amber-700">SLA At Risk</Badge>;
   }
 }
+
+function paymentStatusBadge(ps: PaymentStatus) {
+  switch (ps) {
+    case 'deposit_pending': return <Badge className="border-0 bg-amber-100 text-amber-700">Deposit Pending</Badge>;
+    case 'deposit_paid':    return <Badge className="border-0 bg-blue-100 text-blue-700">Deposit Paid</Badge>;
+    case 'invoice_sent':    return <Badge className="border-0 bg-indigo-100 text-indigo-700">Invoice Sent</Badge>;
+    case 'invoice_overdue': return <Badge className="border-0 bg-red-100 text-red-700">Invoice Overdue</Badge>;
+    case 'paid_in_full':    return <Badge className="border-0 bg-emerald-100 text-emerald-700">Paid in Full</Badge>;
+  }
+}
+
+const PAYMENT_SEL_CLS = 'rounded border border-gray-200 bg-white px-1.5 py-0.5 text-[11px] text-gray-600 focus:outline-none focus:ring-1 focus:ring-indigo-400';
 
 const STATUS_BAR_COLOR: Record<SchedulerStatus, string> = {
   running:     'bg-teal-400',
@@ -422,7 +435,11 @@ function OverviewTab({ jobs, onSelectJob }: { jobs: SchedulerJob[]; onSelectJob:
 
 // ── Tab 2: Jobs ───────────────────────────────────────────────────────────────
 
-function JobsTab({ jobs, onSelectJob }: { jobs: SchedulerJob[]; onSelectJob: (j: SchedulerJob) => void }) {
+function JobsTab({ jobs, onSelectJob, onPaymentChange }: {
+  jobs: SchedulerJob[];
+  onSelectJob: (j: SchedulerJob) => void;
+  onPaymentChange: (id: string, ps: PaymentStatus) => void;
+}) {
   const [search,         setSearch]         = useState('');
   const [statusFilter,   setStatusFilter]   = useState<SchedulerStatus | 'all'>('all');
   const [scheduleFilter, setScheduleFilter] = useState<ScheduleType | 'all'>('all');
@@ -529,7 +546,8 @@ function JobsTab({ jobs, onSelectJob }: { jobs: SchedulerJob[]; onSelectJob: (j:
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="cursor-pointer" onClick={() => toggleSort('status')}>Status <SortInd col="status" /></TableHead>
+              <TableHead className="cursor-pointer" onClick={() => toggleSort('status')}>Job Status <SortInd col="status" /></TableHead>
+              <TableHead>Payment Status</TableHead>
               <TableHead className="cursor-pointer" onClick={() => toggleSort('name')}>Job Name <SortInd col="name" /></TableHead>
               <TableHead>Job ID</TableHead>
               <TableHead>Schedule</TableHead>
@@ -553,6 +571,19 @@ function JobsTab({ jobs, onSelectJob }: { jobs: SchedulerJob[]; onSelectJob: (j:
                   onClick={() => onSelectJob(job)}
                 >
                   <TableCell>{statusBadge(job.status)}</TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <select
+                      value={job.paymentStatus}
+                      onChange={(e) => onPaymentChange(job.id, e.target.value as PaymentStatus)}
+                      className={PAYMENT_SEL_CLS}
+                    >
+                      <option value="deposit_pending">Deposit Pending</option>
+                      <option value="deposit_paid">Deposit Paid</option>
+                      <option value="invoice_sent">Invoice Sent</option>
+                      <option value="invoice_overdue">Invoice Overdue</option>
+                      <option value="paid_in_full">Paid in Full</option>
+                    </select>
+                  </TableCell>
                   <TableCell>
                     <span className="font-medium text-gray-900 text-sm">{job.name.replace(/_/g, ' ')}</span>
                     {live && <LivePill />}
@@ -560,7 +591,11 @@ function JobsTab({ jobs, onSelectJob }: { jobs: SchedulerJob[]; onSelectJob: (j:
                   <TableCell><span className="font-mono text-xs text-gray-400">{job.id}</span></TableCell>
                   <TableCell className="text-xs text-gray-600">{job.schedule}</TableCell>
                   <TableCell className="text-xs text-gray-500">{formatRelative(job.lastRun)}</TableCell>
-                  <TableCell className="text-xs text-gray-500">{formatRelativeFuture(job.nextRun)}</TableCell>
+                  <TableCell className="text-xs text-gray-500">
+                    {job.paymentStatus === 'deposit_pending'
+                      ? <span className="flex items-center gap-1 text-amber-600 font-medium"><Lock className="h-3 w-3" />Blocked</span>
+                      : formatRelativeFuture(job.nextRun)}
+                  </TableCell>
                   <TableCell className="text-xs text-gray-500">{formatDuration(job.avgDuration)}</TableCell>
                   <TableCell className="text-xs text-gray-600 max-w-[120px] truncate">{job.crew.join(', ')}</TableCell>
                   <TableCell>
@@ -737,16 +772,18 @@ function CalendarTab({ jobs, onSelectJob }: { jobs: SchedulerJob[]; onSelectJob:
         </div>
         <div className="grid grid-cols-7 gap-px bg-gray-200 rounded-xl overflow-hidden border border-gray-200">
           {days.map((day) => {
-            const dayJobs   = jobsForDate(day);
-            const inMonth   = isSameMonth(day, currentMonth);
-            const isToday   = isSameDay(day, NOW);
-            const isSelected = selectedDate && isSameDay(day, selectedDate);
-            const blackout  = isBlackout(day);
-            const hasLive   = dayJobs.some(isLiveJob);
+            const dayJobs        = jobsForDate(day);
+            const inMonth        = isSameMonth(day, currentMonth);
+            const isToday        = isSameDay(day, NOW);
+            const isSelected     = selectedDate && isSameDay(day, selectedDate);
+            const blackout       = isBlackout(day);
+            const hasLive        = dayJobs.some(isLiveJob);
+            const hasDepositLock = dayJobs.some((j) => j.paymentStatus === 'deposit_pending');
+            const hasStopWork    = dayJobs.some((j) => j.paymentStatus === 'invoice_overdue');
             return (
               <div
                 key={day.toISOString()}
-                className={`bg-white p-1.5 min-h-[80px] cursor-pointer hover:bg-gray-50 transition-colors ${!inMonth ? 'opacity-40' : ''} ${isSelected ? 'ring-2 ring-inset ring-indigo-400' : ''} ${blackout ? 'bg-gray-50' : ''} ${hasLive ? 'ring-1 ring-inset ring-indigo-200' : ''}`}
+                className={`bg-white p-1.5 min-h-[80px] cursor-pointer hover:bg-gray-50 transition-colors ${!inMonth ? 'opacity-40' : ''} ${isSelected ? 'ring-2 ring-inset ring-indigo-400' : ''} ${blackout ? 'bg-gray-50' : ''} ${hasStopWork ? 'bg-red-50' : hasDepositLock ? 'bg-amber-50' : ''} ${hasLive ? 'ring-1 ring-inset ring-indigo-200' : ''}`}
                 onClick={() => setSelectedDate(isSelected ? null : day)}
               >
                 <div className="flex items-center justify-between">
@@ -754,11 +791,23 @@ function CalendarTab({ jobs, onSelectJob }: { jobs: SchedulerJob[]; onSelectJob:
                     {format(day, 'd')}
                   </span>
                   {blackout && <span className="text-[9px] text-gray-400 italic">blocked</span>}
-                  {hasLive   && <span className="text-[9px] font-semibold text-indigo-500">LIVE</span>}
+                  {hasStopWork    && <span className="text-[9px] font-semibold text-red-500 flex items-center gap-0.5"><OctagonX className="h-2.5 w-2.5" />Stop</span>}
+                  {!hasStopWork && hasDepositLock && <span className="text-[9px] font-semibold text-amber-600 flex items-center gap-0.5"><Lock className="h-2.5 w-2.5" />Dep.</span>}
+                  {!hasStopWork && !hasDepositLock && hasLive && <span className="text-[9px] font-semibold text-indigo-500">LIVE</span>}
                 </div>
                 {blackout && (
                   <div className="mt-1 rounded bg-gray-100 px-1 py-0.5 text-[9px] text-gray-400 truncate">
                     {BLACKOUT_RANGES.find((r) => day >= r.start && day <= r.end)?.label}
+                  </div>
+                )}
+                {hasStopWork && (
+                  <div className="mt-1 rounded bg-red-100 px-1 py-0.5 text-[9px] text-red-600 truncate font-medium">
+                    ⛔ Stop-work
+                  </div>
+                )}
+                {!hasStopWork && hasDepositLock && (
+                  <div className="mt-1 rounded bg-amber-100 px-1 py-0.5 text-[9px] text-amber-700 truncate font-medium">
+                    💳 Deposit Due
                   </div>
                 )}
                 <div className="mt-1 flex flex-wrap gap-0.5">
@@ -956,7 +1005,7 @@ function AnalyticsTab({ jobs }: { jobs: SchedulerJob[] }) {
 
 // ── Job Detail Side Panel ─────────────────────────────────────────────────────
 
-function SidePanel({ job, jobs, onClose, onNavigate }: { job: SchedulerJob; jobs: SchedulerJob[]; onClose: () => void; onNavigate: (j: SchedulerJob) => void }) {
+function SidePanel({ job, jobs, onClose, onNavigate, onPaymentChange }: { job: SchedulerJob; jobs: SchedulerJob[]; onClose: () => void; onNavigate: (j: SchedulerJob) => void; onPaymentChange: (id: string, ps: PaymentStatus) => void }) {
   const [logCopied, setLogCopied] = useState(false);
   const lastLog  = job.runHistory[0]?.log ?? 'No log available.';
   const deps     = job.dependsOn.map((id) => findJob(id, jobs)).filter(Boolean) as SchedulerJob[];
@@ -993,6 +1042,19 @@ function SidePanel({ job, jobs, onClose, onNavigate }: { job: SchedulerJob; jobs
             </div>
           )}
 
+          {job.paymentStatus === 'deposit_pending' && (
+            <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-700 flex items-center gap-1.5">
+              <Lock className="h-3 w-3 shrink-0" />
+              Scheduling blocked — deposit required before this job can be scheduled
+            </div>
+          )}
+          {job.paymentStatus === 'invoice_overdue' && (
+            <div className="mt-2 rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs text-red-700 flex items-center gap-1.5">
+              <OctagonX className="h-3 w-3 shrink-0" />
+              Stop-work active — outstanding invoice must be resolved to resume
+            </div>
+          )}
+
           <div className="mt-3 flex flex-wrap gap-2">
             {(['Run Now', 'Retry', job.status === 'running' ? 'Pause' : 'Resume', 'Skip', 'Edit Schedule'] as const).map((action) => (
               <button key={action} className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50">
@@ -1011,6 +1073,23 @@ function SidePanel({ job, jobs, onClose, onNavigate }: { job: SchedulerJob; jobs
           <div className="border-b border-gray-100 px-6 py-4">
             <h3 className="mb-3 text-xs font-medium uppercase tracking-widest text-gray-400">Details</h3>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+              <div className="col-span-2">
+                <dt className="flex items-center gap-1 font-medium text-gray-400 mb-1"><CreditCard className="h-3 w-3" />Payment Status</dt>
+                <dd className="flex items-center gap-2 flex-wrap">
+                  {paymentStatusBadge(job.paymentStatus)}
+                  <select
+                    value={job.paymentStatus}
+                    onChange={(e) => onPaymentChange(job.id, e.target.value as PaymentStatus)}
+                    className={PAYMENT_SEL_CLS}
+                  >
+                    <option value="deposit_pending">Deposit Pending</option>
+                    <option value="deposit_paid">Deposit Paid</option>
+                    <option value="invoice_sent">Invoice Sent</option>
+                    <option value="invoice_overdue">Invoice Overdue</option>
+                    <option value="paid_in_full">Paid in Full</option>
+                  </select>
+                </dd>
+              </div>
               {[
                 { icon: <Info     className="h-3 w-3" />, label: 'Service',      value: job.serviceType                   },
                 { icon: <Calendar className="h-3 w-3" />, label: 'Schedule',     value: job.schedule                       },
@@ -1109,9 +1188,14 @@ function SidePanel({ job, jobs, onClose, onNavigate }: { job: SchedulerJob; jobs
 export function JobScheduler() {
   const { jobs: liveJobs } = useDashboard();
 
-  const [activeSubTab,   setActiveSubTab]   = useState<SubTab>('overview');
-  const [selectedJob,    setSelectedJob]    = useState<SchedulerJob | null>(null);
-  const [alertDismissed, setAlertDismissed] = useState(false);
+  const [activeSubTab,    setActiveSubTab]    = useState<SubTab>('overview');
+  const [selectedJob,     setSelectedJob]     = useState<SchedulerJob | null>(null);
+  const [alertDismissed,  setAlertDismissed]  = useState(false);
+  const [paymentOverrides, setPaymentOverrides] = useState<Record<string, PaymentStatus>>({});
+
+  function onPaymentChange(id: string, ps: PaymentStatus) {
+    setPaymentOverrides((prev) => ({ ...prev, [id]: ps }));
+  }
 
   // Map live dashboard jobs → SchedulerJob and prepend to mock list
   const mappedLiveJobs = useMemo<SchedulerJob[]>(
@@ -1125,15 +1209,27 @@ export function JobScheduler() {
     [mappedLiveJobs],
   );
 
-  const stats      = useMemo(() => getSchedulerStats(allJobs), [allJobs]);
+  // Apply payment-driven overrides: deposit_pending blocks scheduling, invoice_overdue triggers stop-work
+  const effectiveJobs = useMemo<SchedulerJob[]>(() => {
+    return allJobs.map((job) => {
+      const ps = paymentOverrides[job.id] ?? job.paymentStatus;
+      if (ps === 'deposit_pending') return { ...job, paymentStatus: ps, nextRun: null };
+      if (ps === 'invoice_overdue') return { ...job, paymentStatus: ps, status: 'failed' as SchedulerStatus };
+      return { ...job, paymentStatus: ps };
+    });
+  }, [allJobs, paymentOverrides]);
+
+  const stats      = useMemo(() => getSchedulerStats(effectiveJobs), [effectiveJobs]);
   const alertCount = stats.failed + stats.slaAtRisk;
 
-  // Keep selected job in sync if its status changed in liveJobs
+  // Keep selected job in sync if its status or paymentStatus changed
   useEffect(() => {
     if (!selectedJob) return;
-    const updated = allJobs.find((j) => j.id === selectedJob.id);
-    if (updated && updated.status !== selectedJob.status) setSelectedJob(updated);
-  }, [allJobs, selectedJob]);
+    const updated = effectiveJobs.find((j) => j.id === selectedJob.id);
+    if (updated && (updated.status !== selectedJob.status || updated.paymentStatus !== selectedJob.paymentStatus)) {
+      setSelectedJob(updated);
+    }
+  }, [effectiveJobs, selectedJob]);
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) { if (e.key === 'Escape') setSelectedJob(null); }
@@ -1145,22 +1241,23 @@ export function JobScheduler() {
     <div>
       <StatusCards stats={stats} alertCount={alertCount} />
 
-      {!alertDismissed && <AlertBanner jobs={allJobs} onDismiss={() => setAlertDismissed(true)} />}
+      {!alertDismissed && <AlertBanner jobs={effectiveJobs} onDismiss={() => setAlertDismissed(true)} />}
 
       <SubTabNav active={activeSubTab} onChange={setActiveSubTab} />
 
-      {activeSubTab === 'overview'   && <OverviewTab   jobs={allJobs} onSelectJob={setSelectedJob} />}
-      {activeSubTab === 'jobs'       && <JobsTab       jobs={allJobs} onSelectJob={setSelectedJob} />}
-      {activeSubTab === 'workflows'  && <WorkflowsTab  jobs={allJobs} onSelectJob={setSelectedJob} />}
-      {activeSubTab === 'calendar'   && <CalendarTab   jobs={allJobs} onSelectJob={setSelectedJob} />}
-      {activeSubTab === 'analytics'  && <AnalyticsTab  jobs={allJobs} />}
+      {activeSubTab === 'overview'   && <OverviewTab   jobs={effectiveJobs} onSelectJob={setSelectedJob} />}
+      {activeSubTab === 'jobs'       && <JobsTab       jobs={effectiveJobs} onSelectJob={setSelectedJob} onPaymentChange={onPaymentChange} />}
+      {activeSubTab === 'workflows'  && <WorkflowsTab  jobs={effectiveJobs} onSelectJob={setSelectedJob} />}
+      {activeSubTab === 'calendar'   && <CalendarTab   jobs={effectiveJobs} onSelectJob={setSelectedJob} />}
+      {activeSubTab === 'analytics'  && <AnalyticsTab  jobs={effectiveJobs} />}
 
       {selectedJob && (
         <SidePanel
           job={selectedJob}
-          jobs={allJobs}
+          jobs={effectiveJobs}
           onClose={() => setSelectedJob(null)}
           onNavigate={setSelectedJob}
+          onPaymentChange={onPaymentChange}
         />
       )}
     </div>
