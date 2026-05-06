@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Droplets, PlusCircle, MapPin, Clock, User, Users, Loader2, CheckCircle2, ChevronDown, ChevronUp, BarChart2, CalendarClock } from 'lucide-react';
+import { PlusCircle, MapPin, Clock, User, Users, Loader2, CheckCircle2, ChevronDown, ChevronUp, BarChart2, CalendarClock } from 'lucide-react';
 import { CEOView } from '@/components/dashboard/CEOView';
 import { ManagerView } from '@/components/dashboard/ManagerView';
 import { TimesheetView } from '@/components/dashboard/TimesheetView';
@@ -224,9 +224,11 @@ function DashboardInner() {
       <header className="sticky top-0 z-10 border-b border-gray-200 bg-white/90 shadow-sm backdrop-blur-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600">
-              <Droplets className="h-5 w-5 text-white" />
-            </div>
+            <img
+              src="/logo.jpeg"
+              alt="Exotic Aquascape logo"
+              className="h-9 w-9 rounded-xl object-cover"
+            />
             <div>
               <p className="text-sm font-bold leading-none text-gray-900">Exotic Aquascape</p>
               <p className="mt-0.5 text-xs leading-none text-gray-400">Field Operations</p>
