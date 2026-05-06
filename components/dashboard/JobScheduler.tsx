@@ -435,10 +435,11 @@ function OverviewTab({ jobs, onSelectJob }: { jobs: SchedulerJob[]; onSelectJob:
 
 // ── Tab 2: Jobs ───────────────────────────────────────────────────────────────
 
-function JobsTab({ jobs, onSelectJob, onPaymentChange }: {
+function JobsTab({ jobs, onSelectJob, onPaymentChange, onStatusChange }: {
   jobs: SchedulerJob[];
   onSelectJob: (j: SchedulerJob) => void;
   onPaymentChange: (id: string, ps: PaymentStatus) => void;
+  onStatusChange: (id: string, s: SchedulerStatus) => void;
 }) {
   const [search,         setSearch]         = useState('');
   const [statusFilter,   setStatusFilter]   = useState<SchedulerStatus | 'all'>('all');
@@ -570,7 +571,22 @@ function JobsTab({ jobs, onSelectJob, onPaymentChange }: {
                   onMouseLeave={() => setHoveredRow(null)}
                   onClick={() => onSelectJob(job)}
                 >
-                  <TableCell>{statusBadge(job.status)}</TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <div className="flex flex-col gap-1">
+                      {statusBadge(job.status)}
+                      <select
+                        value={job.status}
+                        onChange={(e) => onStatusChange(job.id, e.target.value as SchedulerStatus)}
+                        className={PAYMENT_SEL_CLS}
+                      >
+                        <option value="queued">Queued</option>
+                        <option value="running">Running</option>
+                        <option value="completed">Completed</option>
+                        <option value="failed">Failed</option>
+                        <option value="sla_at_risk">SLA At Risk</option>
+                      </select>
+                    </div>
+                  </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <select
                       value={job.paymentStatus}
@@ -608,9 +624,9 @@ function JobsTab({ jobs, onSelectJob, onPaymentChange }: {
                   <TableCell>
                     {hoveredRow === job.id && (
                       <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                        <button className="rounded border border-gray-200 px-2 py-0.5 text-[11px] hover:bg-gray-50">Retry</button>
-                        <button className="rounded border border-gray-200 px-2 py-0.5 text-[11px] hover:bg-gray-50">Pause</button>
-                        <button className="rounded border border-gray-200 px-2 py-0.5 text-[11px] hover:bg-gray-50">Log</button>
+                        <button onClick={() => onStatusChange(job.id, 'running')}   className="rounded border border-gray-200 px-2 py-0.5 text-[11px] hover:bg-gray-50">Retry</button>
+                        <button onClick={() => onStatusChange(job.id, 'queued')}    className="rounded border border-gray-200 px-2 py-0.5 text-[11px] hover:bg-gray-50">Pause</button>
+                        <button onClick={() => onSelectJob(job)}                    className="rounded border border-gray-200 px-2 py-0.5 text-[11px] hover:bg-gray-50">Log</button>
                       </div>
                     )}
                   </TableCell>
@@ -1083,7 +1099,7 @@ function AnalyticsTab({ jobs }: { jobs: SchedulerJob[] }) {
 
 // ── Job Detail Side Panel ─────────────────────────────────────────────────────
 
-function SidePanel({ job, jobs, onClose, onNavigate, onPaymentChange }: { job: SchedulerJob; jobs: SchedulerJob[]; onClose: () => void; onNavigate: (j: SchedulerJob) => void; onPaymentChange: (id: string, ps: PaymentStatus) => void }) {
+function SidePanel({ job, jobs, onClose, onNavigate, onPaymentChange, onStatusChange }: { job: SchedulerJob; jobs: SchedulerJob[]; onClose: () => void; onNavigate: (j: SchedulerJob) => void; onPaymentChange: (id: string, ps: PaymentStatus) => void; onStatusChange: (id: string, s: SchedulerStatus) => void }) {
   const [logCopied, setLogCopied] = useState(false);
   const lastLog  = job.runHistory[0]?.log ?? 'No log available.';
   const deps     = job.dependsOn.map((id) => findJob(id, jobs)).filter(Boolean) as SchedulerJob[];
@@ -1134,16 +1150,45 @@ function SidePanel({ job, jobs, onClose, onNavigate, onPaymentChange }: { job: S
           )}
 
           <div className="mt-3 flex flex-wrap gap-2">
-            {(['Run Now', 'Retry', job.status === 'running' ? 'Pause' : 'Resume', 'Skip', 'Edit Schedule'] as const).map((action) => (
-              <button key={action} className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50">
-                {action === 'Run Now'       && <Play        className="h-3 w-3" />}
-                {action === 'Retry'         && <RotateCcw   className="h-3 w-3" />}
-                {(action === 'Pause' || action === 'Resume') && <Pause className="h-3 w-3" />}
-                {action === 'Skip'          && <SkipForward className="h-3 w-3" />}
-                {action === 'Edit Schedule' && <Edit2       className="h-3 w-3" />}
-                {action}
-              </button>
-            ))}
+            {(() => {
+              const payLocked  = job.paymentStatus === 'deposit_pending' || job.paymentStatus === 'invoice_overdue';
+              const depLocked  = job.paymentStatus === 'deposit_pending';
+              type Action = 'Run Now' | 'Retry' | 'Pause' | 'Resume' | 'Skip' | 'Edit Schedule';
+              const actions: Action[] = ['Run Now', 'Retry', job.status === 'running' ? 'Pause' : 'Resume', 'Skip', 'Edit Schedule'];
+              const actionStatus: Record<Action, SchedulerStatus | null> = {
+                'Run Now':       'running',
+                'Retry':         'running',
+                'Pause':         'sla_at_risk',
+                'Resume':        'running',
+                'Skip':          'completed',
+                'Edit Schedule': null,
+              };
+              const blockedActions = new Set<Action>(payLocked ? ['Run Now', 'Resume', 'Retry'] : []);
+              if (depLocked) blockedActions.add('Edit Schedule');
+              return actions.map((action) => {
+                const blocked = blockedActions.has(action);
+                return (
+                  <button
+                    key={action}
+                    disabled={blocked}
+                    onClick={() => {
+                      const s = actionStatus[action];
+                      if (s) onStatusChange(job.id, s);
+                    }}
+                    title={blocked ? (payLocked ? 'Blocked by payment compliance' : undefined) : undefined}
+                    className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium ${blocked ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                  >
+                    {action === 'Run Now'       && <Play        className="h-3 w-3" />}
+                    {action === 'Retry'         && <RotateCcw   className="h-3 w-3" />}
+                    {(action === 'Pause' || action === 'Resume') && <Pause className="h-3 w-3" />}
+                    {action === 'Skip'          && <SkipForward className="h-3 w-3" />}
+                    {action === 'Edit Schedule' && <Edit2       className="h-3 w-3" />}
+                    {action}
+                    {blocked && <Lock className="h-2.5 w-2.5" />}
+                  </button>
+                );
+              });
+            })()}
           </div>
         </div>
 
@@ -1151,6 +1196,29 @@ function SidePanel({ job, jobs, onClose, onNavigate, onPaymentChange }: { job: S
           <div className="border-b border-gray-100 px-6 py-4">
             <h3 className="mb-3 text-xs font-medium uppercase tracking-widest text-gray-400">Details</h3>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+              <div className="col-span-2">
+                <dt className="flex items-center gap-1 font-medium text-gray-400 mb-1">
+                  <Activity className="h-3 w-3" />Job Status
+                  {(job.paymentStatus === 'deposit_pending' || job.paymentStatus === 'invoice_overdue') && (
+                    <span className="ml-1 text-[10px] text-gray-400 italic">(controlled by payment)</span>
+                  )}
+                </dt>
+                <dd className="flex items-center gap-2 flex-wrap">
+                  {statusBadge(job.status)}
+                  <select
+                    value={job.status}
+                    onChange={(e) => onStatusChange(job.id, e.target.value as SchedulerStatus)}
+                    disabled={job.paymentStatus === 'deposit_pending' || job.paymentStatus === 'invoice_overdue'}
+                    className={`${PAYMENT_SEL_CLS} ${(job.paymentStatus === 'deposit_pending' || job.paymentStatus === 'invoice_overdue') ? 'opacity-40 cursor-not-allowed' : ''}`}
+                  >
+                    <option value="queued">Queued</option>
+                    <option value="running">Running</option>
+                    <option value="completed">Completed</option>
+                    <option value="failed">Failed</option>
+                    <option value="sla_at_risk">SLA At Risk</option>
+                  </select>
+                </dd>
+              </div>
               <div className="col-span-2">
                 <dt className="flex items-center gap-1 font-medium text-gray-400 mb-1"><CreditCard className="h-3 w-3" />Payment Status</dt>
                 <dd className="flex items-center gap-2 flex-wrap">
@@ -1266,14 +1334,12 @@ function SidePanel({ job, jobs, onClose, onNavigate, onPaymentChange }: { job: S
 export function JobScheduler() {
   const { jobs: liveJobs } = useDashboard();
 
-  const [activeSubTab,    setActiveSubTab]    = useState<SubTab>('overview');
-  const [selectedJob,     setSelectedJob]     = useState<SchedulerJob | null>(null);
-  const [alertDismissed,  setAlertDismissed]  = useState(false);
+  const [activeSubTab,     setActiveSubTab]     = useState<SubTab>('overview');
+  const [selectedJob,      setSelectedJob]      = useState<SchedulerJob | null>(null);
+  const [alertDismissed,   setAlertDismissed]   = useState(false);
   const [paymentOverrides, setPaymentOverrides] = useState<Record<string, PaymentStatus>>({});
-
-  function onPaymentChange(id: string, ps: PaymentStatus) {
-    setPaymentOverrides((prev) => ({ ...prev, [id]: ps }));
-  }
+  const [statusOverrides,  setStatusOverrides]  = useState<Record<string, SchedulerStatus>>({});
+  const [triggerNotice,    setTriggerNotice]    = useState<{ msg: string; type: 'info' | 'warn' | 'error' } | null>(null);
 
   // Map live dashboard jobs → SchedulerJob and prepend to mock list
   const mappedLiveJobs = useMemo<SchedulerJob[]>(
@@ -1281,26 +1347,68 @@ export function JobScheduler() {
     [liveJobs],
   );
 
-  // Live jobs first so they appear at top of every tab
   const allJobs = useMemo<SchedulerJob[]>(
     () => [...mappedLiveJobs, ...SCHEDULER_JOBS],
     [mappedLiveJobs],
   );
 
-  // Apply payment-driven overrides: deposit_pending blocks scheduling, invoice_overdue triggers stop-work
+  // Payment compliance takes priority over manual status overrides
   const effectiveJobs = useMemo<SchedulerJob[]>(() => {
     return allJobs.map((job) => {
-      const ps = paymentOverrides[job.id] ?? job.paymentStatus;
-      if (ps === 'deposit_pending') return { ...job, paymentStatus: ps, nextRun: null };
+      const ps         = paymentOverrides[job.id] ?? job.paymentStatus;
+      const baseStatus = statusOverrides[job.id]  ?? job.status;
+      if (ps === 'deposit_pending') return { ...job, paymentStatus: ps, status: 'queued' as SchedulerStatus, nextRun: null };
       if (ps === 'invoice_overdue') return { ...job, paymentStatus: ps, status: 'failed' as SchedulerStatus };
-      return { ...job, paymentStatus: ps };
+      return { ...job, paymentStatus: ps, status: baseStatus };
     });
-  }, [allJobs, paymentOverrides]);
+  }, [allJobs, paymentOverrides, statusOverrides]);
 
-  const stats      = useMemo(() => getSchedulerStats(effectiveJobs), [effectiveJobs]);
-  const alertCount = stats.failed + stats.slaAtRisk;
+  function onPaymentChange(id: string, ps: PaymentStatus) {
+    const curPayment = paymentOverrides[id] ?? allJobs.find((j) => j.id === id)?.paymentStatus;
+    const curStatus  = statusOverrides[id]  ?? allJobs.find((j) => j.id === id)?.status;
 
-  // Keep selected job in sync if its status or paymentStatus changed
+    if (ps === 'deposit_pending' && (curStatus === 'running' || curStatus === 'queued')) {
+      setTriggerNotice({ msg: 'Deposit Pending — scheduling blocked, job held in queue', type: 'warn' });
+    } else if (ps === 'invoice_overdue') {
+      setTriggerNotice({ msg: 'Invoice Overdue — stop-work triggered, job status set to Failed', type: 'error' });
+    } else if ((ps === 'deposit_paid' || ps === 'paid_in_full') && (curPayment === 'deposit_pending' || curPayment === 'invoice_overdue')) {
+      setTriggerNotice({ msg: ps === 'paid_in_full' ? 'Paid in Full — all restrictions lifted' : 'Deposit received — scheduling unlocked', type: 'info' });
+    }
+
+    setPaymentOverrides((prev) => ({ ...prev, [id]: ps }));
+  }
+
+  function onStatusChange(id: string, newStatus: SchedulerStatus) {
+    const curPayment = paymentOverrides[id] ?? allJobs.find((j) => j.id === id)?.paymentStatus ?? 'deposit_pending';
+
+    if (newStatus === 'running' && curPayment === 'deposit_pending') {
+      setTriggerNotice({ msg: 'Cannot start — deposit is required before this job can run', type: 'error' });
+      return;
+    }
+    if (newStatus === 'running' && curPayment === 'invoice_overdue') {
+      setTriggerNotice({ msg: 'Cannot start — stop-work is active (invoice overdue)', type: 'error' });
+      return;
+    }
+
+    // Cascade: completing a deposit-paid job advances payment to invoice_sent
+    if (newStatus === 'completed' && curPayment === 'deposit_paid') {
+      setPaymentOverrides((prev) => ({ ...prev, [id]: 'invoice_sent' }));
+      setTriggerNotice({ msg: 'Job completed — payment status advanced to Invoice Sent', type: 'info' });
+    } else if (newStatus === 'completed' && !triggerNotice) {
+      setTriggerNotice({ msg: 'Job marked as Completed', type: 'info' });
+    }
+
+    setStatusOverrides((prev) => ({ ...prev, [id]: newStatus }));
+  }
+
+  // Auto-dismiss trigger notice after 4 s
+  useEffect(() => {
+    if (!triggerNotice) return;
+    const t = setTimeout(() => setTriggerNotice(null), 4000);
+    return () => clearTimeout(t);
+  }, [triggerNotice]);
+
+  // Keep selected job in sync when effective state changes
   useEffect(() => {
     if (!selectedJob) return;
     const updated = effectiveJobs.find((j) => j.id === selectedJob.id);
@@ -1315,16 +1423,31 @@ export function JobScheduler() {
     return () => window.removeEventListener('keydown', handleKey);
   }, []);
 
+  const stats      = useMemo(() => getSchedulerStats(effectiveJobs), [effectiveJobs]);
+  const alertCount = stats.failed + stats.slaAtRisk;
+
   return (
     <div>
       <StatusCards stats={stats} alertCount={alertCount} />
 
       {!alertDismissed && <AlertBanner jobs={effectiveJobs} onDismiss={() => setAlertDismissed(true)} />}
 
+      {triggerNotice && (
+        <div className={`mb-3 flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${
+          triggerNotice.type === 'error' ? 'border-red-200 bg-red-50 text-red-700' :
+          triggerNotice.type === 'warn'  ? 'border-amber-200 bg-amber-50 text-amber-700' :
+                                           'border-emerald-200 bg-emerald-50 text-emerald-700'
+        }`}>
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+          <span className="flex-1">{triggerNotice.msg}</span>
+          <button onClick={() => setTriggerNotice(null)}><X className="h-3.5 w-3.5" /></button>
+        </div>
+      )}
+
       <SubTabNav active={activeSubTab} onChange={setActiveSubTab} />
 
       {activeSubTab === 'overview'   && <OverviewTab   jobs={effectiveJobs} onSelectJob={setSelectedJob} />}
-      {activeSubTab === 'jobs'       && <JobsTab       jobs={effectiveJobs} onSelectJob={setSelectedJob} onPaymentChange={onPaymentChange} />}
+      {activeSubTab === 'jobs'       && <JobsTab       jobs={effectiveJobs} onSelectJob={setSelectedJob} onPaymentChange={onPaymentChange} onStatusChange={onStatusChange} />}
       {activeSubTab === 'workflows'  && <WorkflowsTab  jobs={effectiveJobs} onSelectJob={setSelectedJob} />}
       {activeSubTab === 'calendar'   && <CalendarTab   jobs={effectiveJobs} onSelectJob={setSelectedJob} />}
       {activeSubTab === 'analytics'  && <AnalyticsTab  jobs={effectiveJobs} />}
@@ -1336,6 +1459,7 @@ export function JobScheduler() {
           onClose={() => setSelectedJob(null)}
           onNavigate={setSelectedJob}
           onPaymentChange={onPaymentChange}
+          onStatusChange={onStatusChange}
         />
       )}
     </div>
