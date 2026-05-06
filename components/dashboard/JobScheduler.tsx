@@ -571,22 +571,7 @@ function JobsTab({ jobs, onSelectJob, onPaymentChange, onStatusChange }: {
                   onMouseLeave={() => setHoveredRow(null)}
                   onClick={() => onSelectJob(job)}
                 >
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <div className="flex flex-col gap-1">
-                      {statusBadge(job.status)}
-                      <select
-                        value={job.status}
-                        onChange={(e) => onStatusChange(job.id, e.target.value as SchedulerStatus)}
-                        className={PAYMENT_SEL_CLS}
-                      >
-                        <option value="queued">Queued</option>
-                        <option value="running">Running</option>
-                        <option value="completed">Completed</option>
-                        <option value="failed">Failed</option>
-                        <option value="sla_at_risk">SLA At Risk</option>
-                      </select>
-                    </div>
-                  </TableCell>
+                  <TableCell>{statusBadge(job.status)}</TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <select
                       value={job.paymentStatus}
