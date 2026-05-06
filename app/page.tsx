@@ -1,13 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { PlusCircle, MapPin, Clock, User, Users, Loader2, CheckCircle2, ChevronDown, ChevronUp, BarChart2, CalendarClock } from 'lucide-react';
+import { PlusCircle, MapPin, Clock, User, Users, Loader2, CheckCircle2, ChevronDown, ChevronUp, BarChart2, CalendarClock, Wrench, Receipt } from 'lucide-react';
 import { CEOView } from '@/components/dashboard/CEOView';
 import { ManagerView } from '@/components/dashboard/ManagerView';
 import { TimesheetView } from '@/components/dashboard/TimesheetView';
 import { DashboardProvider, useDashboard } from '@/context/DashboardContext';
 import { RevenueDashboard } from '@/components/dashboard/RevenueDashboard';
 import { JobScheduler } from '@/components/dashboard/JobScheduler';
+import { InvoiceDashboard } from '@/components/dashboard/InvoiceDashboard';
+import { ToolInventoryHealthSection } from '@/components/dashboard/ToolInventoryHealthSection';
 
 type Tab = 'ceo' | 'manager' | 'timesheet' | 'scheduler';
 
@@ -216,6 +218,58 @@ function RevenueBar() {
   );
 }
 
+function ToolInventoryBar() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mb-6 rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50"
+      >
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-sky-600">
+          <Wrench className="h-4 w-4 text-white" />
+        </div>
+        <span className="text-sm font-semibold text-gray-700">Tool Inventory Health</span>
+        <span className="ml-auto text-gray-400">
+          {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </span>
+      </button>
+      {open && (
+        <div className="border-t border-gray-100">
+          <ToolInventoryHealthSection />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function InvoiceBar() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mb-6 rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50"
+      >
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-600">
+          <Receipt className="h-4 w-4 text-white" />
+        </div>
+        <span className="text-sm font-semibold text-gray-700">Invoice Dashboard</span>
+        <span className="ml-auto text-gray-400">
+          {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </span>
+      </button>
+      {open && (
+        <div className="border-t border-gray-100">
+          <InvoiceDashboard />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DashboardInner() {
   const [activeTab, setActiveTab] = useState<Tab>('ceo');
 
@@ -291,6 +345,8 @@ function DashboardInner() {
 
         <QuickJobBar />
         {(activeTab === 'ceo' || activeTab === 'scheduler') && <RevenueBar />}
+        {activeTab === 'ceo' && <InvoiceBar />}
+        {activeTab === 'ceo' && <ToolInventoryBar />}
 
         {activeTab === 'ceo' && <CEOView />}
         {activeTab === 'manager' && <ManagerView />}
