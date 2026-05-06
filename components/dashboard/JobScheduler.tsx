@@ -780,43 +780,60 @@ function CalendarTab({ jobs, onSelectJob }: { jobs: SchedulerJob[]; onSelectJob:
             const hasLive        = dayJobs.some(isLiveJob);
             const hasDepositLock = dayJobs.some((j) => j.paymentStatus === 'deposit_pending');
             const hasStopWork    = dayJobs.some((j) => j.paymentStatus === 'invoice_overdue');
+            const isPaymentLocked = hasDepositLock || hasStopWork;
             return (
               <div
                 key={day.toISOString()}
-                className={`bg-white p-1.5 min-h-[80px] cursor-pointer hover:bg-gray-50 transition-colors ${!inMonth ? 'opacity-40' : ''} ${isSelected ? 'ring-2 ring-inset ring-indigo-400' : ''} ${blackout ? 'bg-gray-50' : ''} ${hasStopWork ? 'bg-red-50' : hasDepositLock ? 'bg-amber-50' : ''} ${hasLive ? 'ring-1 ring-inset ring-indigo-200' : ''}`}
+                className={[
+                  'relative p-1.5 min-h-[80px] transition-colors',
+                  !inMonth ? 'opacity-40' : '',
+                  isPaymentLocked ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50',
+                  isSelected ? 'ring-2 ring-inset ring-indigo-400' : '',
+                  blackout    ? 'bg-gray-50'  : '',
+                  hasStopWork ? 'bg-red-50'   : hasDepositLock ? 'bg-amber-50' : 'bg-white',
+                  hasLive && !isPaymentLocked ? 'ring-1 ring-inset ring-indigo-200' : '',
+                ].join(' ')}
                 onClick={() => setSelectedDate(isSelected ? null : day)}
               >
-                <div className="flex items-center justify-between">
+                {/* Payment lock stripe overlay */}
+                {isPaymentLocked && (
+                  <div className={`absolute inset-0 pointer-events-none ${hasStopWork ? 'bg-red-500/5' : 'bg-amber-500/5'}`}
+                    style={{ backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 6px, ${hasStopWork ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.08)'} 6px, ${hasStopWork ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.08)'} 12px)` }}
+                  />
+                )}
+                <div className="flex items-center justify-between relative">
                   <span className={`text-xs font-medium ${isToday ? 'flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-white text-[10px]' : 'text-gray-600'}`}>
                     {format(day, 'd')}
                   </span>
-                  {blackout && <span className="text-[9px] text-gray-400 italic">blocked</span>}
-                  {hasStopWork    && <span className="text-[9px] font-semibold text-red-500 flex items-center gap-0.5"><OctagonX className="h-2.5 w-2.5" />Stop</span>}
-                  {!hasStopWork && hasDepositLock && <span className="text-[9px] font-semibold text-amber-600 flex items-center gap-0.5"><Lock className="h-2.5 w-2.5" />Dep.</span>}
-                  {!hasStopWork && !hasDepositLock && hasLive && <span className="text-[9px] font-semibold text-indigo-500">LIVE</span>}
+                  {blackout && !isPaymentLocked && <span className="text-[9px] text-gray-400 italic">blocked</span>}
+                  {hasStopWork    && <span className="text-[9px] font-bold text-red-600 flex items-center gap-0.5"><OctagonX className="h-2.5 w-2.5" />STOP</span>}
+                  {!hasStopWork && hasDepositLock && <span className="text-[9px] font-bold text-amber-600 flex items-center gap-0.5"><Lock className="h-2.5 w-2.5" />LOCK</span>}
+                  {!isPaymentLocked && hasLive && <span className="text-[9px] font-semibold text-indigo-500">LIVE</span>}
                 </div>
-                {blackout && (
-                  <div className="mt-1 rounded bg-gray-100 px-1 py-0.5 text-[9px] text-gray-400 truncate">
+                {blackout && !isPaymentLocked && (
+                  <div className="mt-1 rounded bg-gray-100 px-1 py-0.5 text-[9px] text-gray-400 truncate relative">
                     {BLACKOUT_RANGES.find((r) => day >= r.start && day <= r.end)?.label}
                   </div>
                 )}
                 {hasStopWork && (
-                  <div className="mt-1 rounded bg-red-100 px-1 py-0.5 text-[9px] text-red-600 truncate font-medium">
-                    ⛔ Stop-work
+                  <div className="mt-1 rounded bg-red-100 border border-red-200 px-1 py-0.5 text-[9px] text-red-700 truncate font-semibold relative">
+                    Invoice Overdue
                   </div>
                 )}
                 {!hasStopWork && hasDepositLock && (
-                  <div className="mt-1 rounded bg-amber-100 px-1 py-0.5 text-[9px] text-amber-700 truncate font-medium">
-                    💳 Deposit Due
+                  <div className="mt-1 rounded bg-amber-100 border border-amber-200 px-1 py-0.5 text-[9px] text-amber-700 truncate font-semibold relative">
+                    Deposit Pending
                   </div>
                 )}
-                <div className="mt-1 flex flex-wrap gap-0.5">
+                <div className="mt-1 flex flex-wrap gap-0.5 relative">
                   {dayJobs.slice(0, 3).map((job) => (
                     <span key={job.id} className={`inline-block h-2 w-2 rounded-full ${
-                      job.status === 'completed' ? 'bg-emerald-400' :
-                      job.status === 'running'   ? 'bg-teal-400'    :
-                      job.status === 'failed'    ? 'bg-red-400'     :
-                      job.status === 'sla_at_risk' ? 'bg-amber-400' : 'bg-gray-300'
+                      job.paymentStatus === 'invoice_overdue' ? 'bg-red-500'   :
+                      job.paymentStatus === 'deposit_pending' ? 'bg-amber-400' :
+                      job.status === 'completed'   ? 'bg-emerald-400' :
+                      job.status === 'running'     ? 'bg-teal-400'    :
+                      job.status === 'failed'      ? 'bg-red-400'     :
+                      job.status === 'sla_at_risk' ? 'bg-amber-400'   : 'bg-gray-300'
                     } ${isLiveJob(job) ? 'ring-1 ring-indigo-400' : ''}`} title={job.name.replace(/_/g, ' ')} />
                   ))}
                   {dayJobs.length > 3 && <span className="text-[9px] text-gray-400">+{dayJobs.length - 3}</span>}
@@ -826,31 +843,84 @@ function CalendarTab({ jobs, onSelectJob }: { jobs: SchedulerJob[]; onSelectJob:
           })}
         </div>
 
-        {selectedDate && (
-          <div className="mt-4 rounded-xl border border-gray-200 bg-white shadow-sm p-4">
-            <h4 className="mb-3 text-sm font-semibold text-gray-800">{format(selectedDate, 'EEEE, MMMM d')}</h4>
-            {jobsForDate(selectedDate).length === 0 ? (
-              <p className="text-xs text-gray-400">No jobs scheduled for this day</p>
-            ) : (
-              <div className="divide-y divide-gray-100">
-                {jobsForDate(selectedDate).map((job) => (
-                  <div key={job.id} className={`flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 rounded px-1 ${isLiveJob(job) ? 'bg-indigo-50/50' : ''}`} onClick={() => onSelectJob(job)}>
-                    <div className="flex items-center gap-3">
-                      {statusBadge(job.status)}
-                      <span className="text-sm font-medium text-gray-800">{job.name.replace(/_/g, ' ')}</span>
-                      {isLiveJob(job) && <LivePill />}
-                    </div>
-                    <div className="text-xs text-gray-400">
-                      {job.lastRun && isSameDay(job.lastRun, selectedDate) ? format(job.lastRun, 'h:mm a')
-                       : job.nextRun && isSameDay(job.nextRun, selectedDate) ? format(job.nextRun, 'h:mm a') : '—'}
-                      {' · '}{formatDuration(job.avgDuration)}
-                    </div>
-                  </div>
-                ))}
+        {/* Calendar legend */}
+        <div className="mt-2 flex flex-wrap items-center gap-3 px-1">
+          <span className="flex items-center gap-1 text-[10px] text-gray-400"><span className="h-2 w-2 rounded-full bg-red-500 inline-block" />Invoice Overdue — stop-work</span>
+          <span className="flex items-center gap-1 text-[10px] text-gray-400"><span className="h-2 w-2 rounded-full bg-amber-400 inline-block" />Deposit Pending — scheduling locked</span>
+          <span className="flex items-center gap-1 text-[10px] text-gray-400"><span className="h-2 w-2 rounded-full bg-emerald-400 inline-block" />Compliant</span>
+        </div>
+
+        {selectedDate && (() => {
+          const selJobs        = jobsForDate(selectedDate);
+          const selStopWork    = selJobs.filter((j) => j.paymentStatus === 'invoice_overdue');
+          const selDepositLock = selJobs.filter((j) => j.paymentStatus === 'deposit_pending');
+          const selLocked      = selStopWork.length > 0 || selDepositLock.length > 0;
+          return (
+            <div className={`mt-4 rounded-xl border shadow-sm p-4 ${selStopWork.length > 0 ? 'border-red-200 bg-red-50' : selDepositLock.length > 0 ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-white'}`}>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-semibold text-gray-800">{format(selectedDate, 'EEEE, MMMM d')}</h4>
+                {selStopWork.length > 0 && (
+                  <span className="flex items-center gap-1 rounded-full bg-red-100 border border-red-200 px-2 py-0.5 text-[11px] font-semibold text-red-700">
+                    <OctagonX className="h-3 w-3" />Stop-Work Active
+                  </span>
+                )}
+                {!selStopWork.length && selDepositLock.length > 0 && (
+                  <span className="flex items-center gap-1 rounded-full bg-amber-100 border border-amber-200 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                    <Lock className="h-3 w-3" />Scheduling Locked
+                  </span>
+                )}
               </div>
-            )}
-          </div>
-        )}
+
+              {selStopWork.length > 0 && (
+                <div className="mb-3 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs text-red-700">
+                  <p className="font-semibold mb-0.5">Stop-work triggered — no new scheduling allowed</p>
+                  <p className="text-red-500">Resolve outstanding invoice for: {selStopWork.map((j) => j.name.replace(/_/g, ' ')).join(', ')}</p>
+                </div>
+              )}
+              {selDepositLock.length > 0 && !selStopWork.length && (
+                <div className="mb-3 rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs text-amber-700">
+                  <p className="font-semibold mb-0.5">Calendar locked — deposit required before scheduling</p>
+                  <p className="text-amber-500">Awaiting deposit for: {selDepositLock.map((j) => j.name.replace(/_/g, ' ')).join(', ')}</p>
+                </div>
+              )}
+
+              {selJobs.length === 0 ? (
+                selLocked
+                  ? <p className="text-xs text-gray-400">No jobs on this day — new scheduling blocked by payment compliance.</p>
+                  : <p className="text-xs text-gray-400">No jobs scheduled for this day</p>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {selJobs.map((job) => (
+                    <div key={job.id} className={`flex items-center justify-between py-2 rounded px-1 ${
+                      job.paymentStatus === 'invoice_overdue' || job.paymentStatus === 'deposit_pending'
+                        ? 'opacity-75 cursor-not-allowed'
+                        : 'cursor-pointer hover:bg-gray-50'
+                    } ${isLiveJob(job) ? 'bg-indigo-50/50' : ''}`}
+                      onClick={() => {
+                        if (job.paymentStatus !== 'invoice_overdue' && job.paymentStatus !== 'deposit_pending') onSelectJob(job);
+                      }}
+                    >
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {statusBadge(job.status)}
+                        {paymentStatusBadge(job.paymentStatus)}
+                        <span className="text-sm font-medium text-gray-800">{job.name.replace(/_/g, ' ')}</span>
+                        {isLiveJob(job) && <LivePill />}
+                        {(job.paymentStatus === 'invoice_overdue' || job.paymentStatus === 'deposit_pending') && (
+                          <Lock className="h-3 w-3 text-gray-400" />
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-400 shrink-0">
+                        {job.lastRun && isSameDay(job.lastRun, selectedDate) ? format(job.lastRun, 'h:mm a')
+                         : job.nextRun && isSameDay(job.nextRun, selectedDate) ? format(job.nextRun, 'h:mm a') : '—'}
+                        {' · '}{formatDuration(job.avgDuration)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       <div className="w-52 shrink-0">
@@ -859,12 +929,20 @@ function CalendarTab({ jobs, onSelectJob }: { jobs: SchedulerJob[]; onSelectJob:
           {upcomingToday.length === 0 ? (
             <div className="px-3 py-4 text-xs text-gray-400 text-center">No upcoming jobs</div>
           ) : (
-            upcomingToday.slice(0, 10).map((job) => (
-              <div key={job.id} className={`px-3 py-2.5 cursor-pointer hover:bg-gray-50 ${isLiveJob(job) ? 'border-l-2 border-indigo-400' : ''}`} onClick={() => onSelectJob(job)}>
-                <p className="text-xs font-medium text-gray-800 truncate">{job.name.replace(/_/g, ' ')}</p>
-                <p className="text-[10px] text-gray-400">{job.nextRun ? format(job.nextRun, 'h:mm a') : '—'} · {job.serviceType}</p>
-              </div>
-            ))
+            upcomingToday.slice(0, 10).map((job) => {
+              const payLocked = job.paymentStatus === 'deposit_pending' || job.paymentStatus === 'invoice_overdue';
+              return (
+                <div key={job.id} className={`px-3 py-2.5 ${payLocked ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:bg-gray-50'} ${isLiveJob(job) ? 'border-l-2 border-indigo-400' : ''} ${job.paymentStatus === 'invoice_overdue' ? 'bg-red-50' : job.paymentStatus === 'deposit_pending' ? 'bg-amber-50' : ''}`}
+                  onClick={() => { if (!payLocked) onSelectJob(job); }}>
+                  <div className="flex items-center gap-1 mb-0.5">
+                    <p className="text-xs font-medium text-gray-800 truncate flex-1">{job.name.replace(/_/g, ' ')}</p>
+                    {job.paymentStatus === 'invoice_overdue' && <OctagonX className="h-3 w-3 text-red-500 shrink-0" />}
+                    {job.paymentStatus === 'deposit_pending' && <Lock className="h-3 w-3 text-amber-500 shrink-0" />}
+                  </div>
+                  <p className="text-[10px] text-gray-400">{job.nextRun ? format(job.nextRun, 'h:mm a') : '—'} · {job.serviceType}</p>
+                </div>
+              );
+            })
           )}
         </div>
       </div>
