@@ -236,6 +236,27 @@ class MockDatabase {
     return this.tools.find((t) => t.id === toolId);
   }
 
+  addTool(name: string, category: string): Tool {
+    const tool: Tool = { id: `t${uid()}`, name, category, status: 'available' };
+    this.tools.push(tool);
+    return tool;
+  }
+
+  removeTool(toolId: string): boolean {
+    const idx = this.tools.findIndex((t) => t.id === toolId);
+    if (idx === -1) return false;
+    this.tools.splice(idx, 1);
+    return true;
+  }
+
+  updateTool(toolId: string, updates: { name?: string; category?: string }): Tool | null {
+    const tool = this.getTool(toolId);
+    if (!tool) return null;
+    if (updates.name) tool.name = updates.name;
+    if (updates.category) tool.category = updates.category;
+    return tool;
+  }
+
   setToolStatus(toolId: string, status: ToolStatus, worker?: { id: string; name: string }): Tool | null {
     const tool = this.getTool(toolId);
     if (!tool) return null;
