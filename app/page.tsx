@@ -314,14 +314,18 @@ function DashboardInner() {
         </div>
 
         <QuickJobBar />
-        {(activeTab === 'ceo' || activeTab === 'scheduler') && <RevenueBar />}
-        {activeTab === 'ceo' && <InvoiceBar />}
-        {activeTab === 'ceo' && <ToolInventoryBar />}
+        <div className="transition-opacity duration-300">
+          {(activeTab === 'ceo' || activeTab === 'scheduler') && <RevenueBar />}
+          {activeTab === 'ceo' && <InvoiceBar />}
+          {activeTab === 'ceo' && <ToolInventoryBar />}
+        </div>
 
-        {activeTab === 'ceo' && <CEOView />}
-        {activeTab === 'manager' && <ManagerView />}
-        {activeTab === 'timesheet' && <TimesheetView />}
-        {activeTab === 'scheduler' && <JobScheduler />}
+        <div key={activeTab} className="transition-opacity duration-300 animate-in fade-in-0">
+          {activeTab === 'ceo' && <CEOView />}
+          {activeTab === 'manager' && <ManagerView />}
+          {activeTab === 'timesheet' && <TimesheetView />}
+          {activeTab === 'scheduler' && <JobScheduler />}
+        </div>
       </main>
 
       <footer className="border-t border-gray-200 py-4 text-center text-xs text-gray-400">

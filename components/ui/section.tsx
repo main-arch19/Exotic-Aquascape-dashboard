@@ -43,8 +43,8 @@ const SectionContent = React.forwardRef<HTMLDivElement, SectionProps>(
         <Card
           ref={ref}
           className={cn(
-            'transition-shadow overflow-hidden',
-            hover && 'hover:shadow-md'
+            'transition-all duration-200 overflow-hidden',
+            hover && 'hover:shadow-md hover:-translate-y-0.5'
           )}
         >
           <button
@@ -75,8 +75,8 @@ const SectionContent = React.forwardRef<HTMLDivElement, SectionProps>(
       <Card
         ref={ref}
         className={cn(
-          'transition-shadow',
-          hover && 'hover:shadow-md'
+          'transition-all duration-200',
+          hover && 'hover:shadow-md hover:-translate-y-0.5'
         )}
       >
         {(title || icon) && (
