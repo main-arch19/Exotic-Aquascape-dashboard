@@ -10,6 +10,8 @@ import {
   ALL_TRANSACTIONS, PARISHES, offsetYearMonth, sumNetRevForParishMonth, getLatestYearMonth,
 } from '@/lib/mock-revenue-db';
 import type { Parish, SalesChannel, Transaction } from '@/lib/mock-revenue-db';
+import { CHART_COLOR_SCHEMES, TOOLTIP_STYLE } from '@/lib/chart-theme';
+import { ChartTooltip } from './ChartTooltip';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -155,10 +157,8 @@ function computeKPIs(filtered: Transaction[], rows: ParishRow[]): KPISummary {
 
 // ─── Color palettes ───────────────────────────────────────────────────────────
 
-const LINE_COLORS = ['#6366f1', '#0ea5e9', '#f59e0b', '#10b981'];
-const CHANNEL_COLORS: Record<SalesChannel, string> = {
-  'IN-STORE': '#6366f1', ONLINE: '#0ea5e9', AGENT: '#f59e0b', B2B: '#10b981',
-};
+const LINE_COLORS = CHART_COLOR_SCHEMES.line;
+const CHANNEL_COLORS = CHART_COLOR_SCHEMES.channel;
 
 // ─── GlobalFilters ────────────────────────────────────────────────────────────
 
@@ -499,8 +499,7 @@ function RevenueTrendChart({ filtered, trendParishes, setTrendParishes }: {
           <XAxis dataKey="label" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
           <YAxis tickFormatter={formatJMD} tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={58} />
           <Tooltip
-            formatter={(v: number) => [formatJMD(v), '']}
-            contentStyle={{ fontSize: 12, borderRadius: 12, border: '1px solid #e5e7eb' }}
+            content={<ChartTooltip formatter={formatJMD} />}
           />
           <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
           {trendParishes.map((p, i) => (
@@ -558,8 +557,7 @@ function ChannelDonutChart({ rows }: { rows: ParishRow[] }) {
             ))}
           </Pie>
           <Tooltip
-            formatter={(v: number) => [formatJMD(v), '']}
-            contentStyle={{ fontSize: 12, borderRadius: 12, border: '1px solid #e5e7eb' }}
+            content={<ChartTooltip formatter={formatJMD} />}
           />
         </PieChart>
       </ResponsiveContainer>

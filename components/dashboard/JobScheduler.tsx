@@ -26,6 +26,8 @@ import {
   getSchedulerStats, formatDuration, formatRelative, formatRelativeFuture,
   type SchedulerJob, type SchedulerStatus, type ScheduleType, type ServiceType, type PaymentStatus,
 } from '@/lib/mock-scheduler-db';
+import { STATUS_COLORS, CHART_COLOR_SCHEMES } from '@/lib/chart-theme';
+import { ChartTooltip } from './ChartTooltip';
 
 const NOW = new Date('2026-05-05T10:30:00');
 const TABLE_PAGE_SIZE = 10;
@@ -129,20 +131,22 @@ const STATUS_BAR_COLOR: Record<SchedulerStatus, string> = {
   sla_at_risk: 'bg-amber-400',
 };
 
+// Status node colors — teal/aquatic theme
+// Using CSS custom properties would require getComputedStyle in browser; keeping hex for SVG compatibility
 const STATUS_NODE_FILL: Record<SchedulerStatus, string> = {
-  running:     '#99f6e4',
-  completed:   '#a7f3d0',
-  failed:      '#fecaca',
-  queued:      '#e5e7eb',
-  sla_at_risk: '#fde68a',
+  running:     '#a5f3fc', // cyan-200
+  completed:   '#99f6e4', // teal-200
+  failed:      '#fecaca', // red-200
+  queued:      '#e5e7eb', // gray-200
+  sla_at_risk: '#fde68a', // amber-200
 };
 
 const STATUS_NODE_TEXT: Record<SchedulerStatus, string> = {
-  running:     '#0d9488',
-  completed:   '#059669',
-  failed:      '#dc2626',
-  queued:      '#6b7280',
-  sla_at_risk: '#d97706',
+  running:     '#0891b2', // cyan-700
+  completed:   '#0d9488', // teal-700
+  failed:      '#dc2626', // red-600
+  queued:      '#6b7280', // gray-600
+  sla_at_risk: '#d97706', // amber-600
 };
 
 function formatTime(date: Date | null): string {
@@ -685,8 +689,8 @@ function WorkflowsTab({ jobs, onSelectJob }: { jobs: SchedulerJob[]; onSelectJob
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-6 overflow-x-auto">
         <svg width={svgW} height={Math.max(svgH, 120)} className="overflow-visible">
           <defs>
-            <marker id="arrow"          markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#94a3b8" /></marker>
-            <marker id="arrow-critical" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#6366f1" /></marker>
+            <marker id="arrow"          markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#cbd5e1" /></marker>
+            <marker id="arrow-critical" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#0d9488" /></marker>
           </defs>
 
           {wfJobs.map((job) =>
@@ -699,7 +703,7 @@ function WorkflowsTab({ jobs, onSelectJob }: { jobs: SchedulerJob[]; onSelectJob
               const mx = (x1 + x2) / 2;
               return (
                 <path key={`${pid}-${job.id}`} d={`M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`}
-                  fill="none" stroke={isCrit ? '#6366f1' : '#94a3b8'}
+                  fill="none" stroke={isCrit ? '#0d9488' : '#cbd5e1'}
                   strokeWidth={isCrit ? 2 : 1.5} strokeDasharray={isCrit ? undefined : '4 2'}
                   markerEnd={isCrit ? 'url(#arrow-critical)' : 'url(#arrow)'}
                 />
@@ -1027,10 +1031,10 @@ function AnalyticsTab({ jobs }: { jobs: SchedulerJob[] }) {
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis dataKey="date" tick={{ fontSize: 9 }} interval={6} />
               <YAxis tick={{ fontSize: 10 }} />
-              <Tooltip contentStyle={{ fontSize: 11 }} />
+              <Tooltip content={<ChartTooltip />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Line type="monotone" dataKey="success" stroke="#10b981" strokeWidth={2} dot={false} name="Success" />
-              <Line type="monotone" dataKey="failed"  stroke="#ef4444" strokeWidth={2} dot={false} name="Failed"  />
+              <Line type="monotone" dataKey="success" stroke="#0d9488" strokeWidth={2} dot={false} name="Success" />
+              <Line type="monotone" dataKey="failed"  stroke="#dc2626" strokeWidth={2} dot={false} name="Failed"  />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -1042,9 +1046,9 @@ function AnalyticsTab({ jobs }: { jobs: SchedulerJob[] }) {
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis dataKey="name" tick={{ fontSize: 9 }} />
               <YAxis tick={{ fontSize: 10 }} />
-              <Tooltip contentStyle={{ fontSize: 11 }} formatter={(v) => [`${v}m`, 'Avg Duration']} />
-              <Bar dataKey="avgDuration" fill="#6366f1" radius={[4, 4, 0, 0]} />
-              <ReferenceLine y={histAvg} stroke="#94a3b8" strokeDasharray="4 4" label={{ value: 'Avg', fontSize: 9, fill: '#94a3b8' }} />
+              <Tooltip content={<ChartTooltip formatter={(v: any) => `${v}m`} />} />
+              <Bar dataKey="avgDuration" fill="#0d9488" radius={[4, 4, 0, 0]} />
+              <ReferenceLine y={histAvg} stroke="#cbd5e1" strokeDasharray="4 4" label={{ value: 'Avg', fontSize: 9, fill: '#64748b' }} />
             </BarChart>
           </ResponsiveContainer>
         </div>
