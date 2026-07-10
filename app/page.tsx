@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { PlusCircle, MapPin, Clock, User, Users, Loader2, CheckCircle2, ChevronDown, ChevronUp, BarChart2, CalendarClock, Wrench, Receipt } from 'lucide-react';
+import { PlusCircle, MapPin, Clock, User, Users, Loader2, CheckCircle2, BarChart2, CalendarClock, Wrench, Receipt } from 'lucide-react';
 import { CEOView } from '@/components/dashboard/CEOView';
 import { ManagerView } from '@/components/dashboard/ManagerView';
 import { TimesheetView } from '@/components/dashboard/TimesheetView';
@@ -10,6 +10,7 @@ import { RevenueDashboard } from '@/components/dashboard/RevenueDashboard';
 import { JobScheduler } from '@/components/dashboard/JobScheduler';
 import { InvoiceDashboard } from '@/components/dashboard/InvoiceDashboard';
 import { ToolInventoryHealthSection } from '@/components/dashboard/ToolInventoryHealthSection';
+import { Section } from '@/components/ui/section';
 
 type Tab = 'ceo' | 'manager' | 'timesheet' | 'scheduler';
 
@@ -158,7 +159,6 @@ function QuickJobForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: 
 }
 
 function QuickJobBar() {
-  const [open, setOpen] = useState(false);
   const [success, setSuccess] = useState(false);
 
   const handleSuccess = () => {
@@ -167,105 +167,75 @@ function QuickJobBar() {
   };
 
   return (
-    <div className="mb-6 rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50"
+    <div className="mb-6">
+      <Section
+        title="Create New Job"
+        icon={<PlusCircle className="h-4 w-4" />}
+        collapsible
+        defaultOpen={false}
+        accent="primary"
+        hover
       >
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-600">
-          <PlusCircle className="h-4 w-4 text-white" />
+        <div className="space-y-4">
+          {success && (
+            <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+              <CheckCircle2 className="h-4 w-4" /> Job created successfully!
+            </div>
+          )}
+          <QuickJobForm onClose={() => {}} onSuccess={handleSuccess} />
         </div>
-        <span className="text-sm font-semibold text-gray-700">Create New Job</span>
-        {success && (
-          <span className="flex items-center gap-1 text-xs font-medium text-emerald-600 ml-2">
-            <CheckCircle2 className="h-3.5 w-3.5" /> Job created!
-          </span>
-        )}
-        <span className="ml-auto text-gray-400">
-          {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </span>
-      </button>
-
-      {open && <QuickJobForm onClose={() => setOpen(false)} onSuccess={handleSuccess} />}
+      </Section>
     </div>
   );
 }
 
 function RevenueBar() {
-  const [open, setOpen] = useState(false);
   return (
-    <div className="mb-6 rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50"
+    <div className="mb-6">
+      <Section
+        title="Revenue Calculation Dashboard"
+        icon={<BarChart2 className="h-4 w-4" />}
+        collapsible
+        defaultOpen={false}
+        accent="primary"
+        hover
       >
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-600">
-          <BarChart2 className="h-4 w-4 text-white" />
-        </div>
-        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-700">Revenue Calculation Dashboard</span>
-        <span className="ml-auto text-gray-400">
-          {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </span>
-      </button>
-      {open && (
-        <div className="border-t border-gray-100">
-          <RevenueDashboard />
-        </div>
-      )}
+        <RevenueDashboard />
+      </Section>
     </div>
   );
 }
 
 function ToolInventoryBar() {
-  const [open, setOpen] = useState(false);
   return (
-    <div className="mb-6 rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50"
+    <div className="mb-6">
+      <Section
+        title="Tool Inventory Health"
+        icon={<Wrench className="h-4 w-4" />}
+        collapsible
+        defaultOpen={false}
+        accent="emerald"
+        hover
       >
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-sky-600">
-          <Wrench className="h-4 w-4 text-white" />
-        </div>
-        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-700">Tool Inventory Health</span>
-        <span className="ml-auto text-gray-400">
-          {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </span>
-      </button>
-      {open && (
-        <div className="border-t border-gray-100">
-          <ToolInventoryHealthSection />
-        </div>
-      )}
+        <ToolInventoryHealthSection />
+      </Section>
     </div>
   );
 }
 
 function InvoiceBar() {
-  const [open, setOpen] = useState(false);
   return (
-    <div className="mb-6 rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50"
+    <div className="mb-6">
+      <Section
+        title="Invoice Dashboard"
+        icon={<Receipt className="h-4 w-4" />}
+        collapsible
+        defaultOpen={false}
+        accent="primary"
+        hover
       >
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-600">
-          <Receipt className="h-4 w-4 text-white" />
-        </div>
-        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-700">Invoice Dashboard</span>
-        <span className="ml-auto text-gray-400">
-          {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </span>
-      </button>
-      {open && (
-        <div className="border-t border-gray-100">
-          <InvoiceDashboard />
-        </div>
-      )}
+        <InvoiceDashboard />
+      </Section>
     </div>
   );
 }
@@ -274,7 +244,7 @@ function DashboardInner() {
   const [activeTab, setActiveTab] = useState<Tab>('ceo');
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
+    <div className="flex min-h-screen flex-col bg-background">
       <header className="sticky top-0 z-10 border-b border-gray-200 bg-white/90 shadow-sm backdrop-blur-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">

@@ -12,7 +12,7 @@ interface KPICardProps {
 
 function KPICard({ label, value, icon, accent }: KPICardProps) {
   return (
-    <Card className="border-gray-200 bg-white shadow-sm">
+    <Card>
       <CardContent className="flex items-center gap-4 p-5">
         <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${accent}`}>
           {icon}
