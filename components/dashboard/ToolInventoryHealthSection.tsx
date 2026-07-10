@@ -105,14 +105,14 @@ function AddToolForm({ onAdded, onCancel }: { onAdded: () => void; onCancel: () 
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Tool name"
-        className={`${inputCls} min-w-[140px] flex-1`}
+        className={`${inputCls} min-w-[110px] sm:min-w-[140px] flex-1`}
       />
       <input
         value={category}
         onChange={(e) => setCategory(e.target.value)}
         placeholder="Category"
         list="category-options"
-        className={`${inputCls} min-w-[120px] w-36`}
+        className={`${inputCls} min-w-[90px] w-28 sm:min-w-[120px] sm:w-36`}
       />
       <datalist id="category-options">
         {['Cleaning', 'Testing', 'Equipment', 'Handling', 'Supplies'].map((c) => (
@@ -221,13 +221,13 @@ function ToolRow({ tool, onDeleted, onUpdated }: {
             autoFocus
             value={editName}
             onChange={(e) => setEditName(e.target.value)}
-            className={`${inputCls} min-w-[140px] flex-1 font-semibold`}
+            className={`${inputCls} min-w-[110px] sm:min-w-[140px] flex-1 font-semibold`}
           />
           <input
             value={editCategory}
             onChange={(e) => setEditCategory(e.target.value)}
             list="category-options-edit"
-            className={`${inputCls} min-w-[120px] w-36`}
+            className={`${inputCls} min-w-[90px] w-28 sm:min-w-[120px] sm:w-36`}
           />
           <datalist id="category-options-edit">
             {['Cleaning', 'Testing', 'Equipment', 'Handling', 'Supplies'].map((c) => (
@@ -267,7 +267,7 @@ function ToolRow({ tool, onDeleted, onUpdated }: {
         >
           <Wrench className="h-3.5 w-3.5 shrink-0 text-sky-400" />
           <span className="flex-1 text-sm font-semibold text-gray-800">{tool.name}</span>
-          <span className="text-xs text-gray-400">{tool.category}</span>
+          <span className="hidden sm:inline text-xs text-gray-400">{tool.category}</span>
           <span
             className={`mx-2 h-2.5 w-2.5 shrink-0 rounded-full ${glow.ledClass}`}
             style={glow.ledStyle}
@@ -276,7 +276,7 @@ function ToolRow({ tool, onDeleted, onUpdated }: {
 
         {/* Action buttons */}
         {confirmDelete ? (
-          <div className="flex items-center gap-1.5 ml-1">
+          <div className="flex items-center gap-1.5 ml-1 shrink-0">
             <span className="text-xs font-medium text-red-500">Delete?</span>
             <button
               type="button"
@@ -296,7 +296,7 @@ function ToolRow({ tool, onDeleted, onUpdated }: {
             </button>
           </div>
         ) : (
-          <div className="ml-1 flex items-center gap-0.5">
+          <div className="ml-1 flex items-center gap-0.5 shrink-0">
             <button
               type="button"
               title="Edit tool"

@@ -141,7 +141,7 @@ function InvoiceSidePanel({
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/20" onClick={onClose} />
-      <div className="fixed right-0 top-0 z-50 flex h-full w-[40%] min-w-[360px] max-w-[600px] flex-col bg-white shadow-2xl">
+      <div className="fixed inset-y-0 right-0 z-50 flex h-full w-full flex-col bg-white shadow-2xl sm:w-[40%] sm:min-w-[360px] sm:max-w-[600px]">
         {/* Header */}
         <div className="shrink-0 border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
@@ -293,7 +293,8 @@ function InvoiceSidePanel({
             <h3 className="mb-3 text-[10px] font-medium uppercase tracking-widest text-gray-400">
               Line Items
             </h3>
-            <table className="w-full text-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-gray-200 text-left text-[10px] font-medium uppercase tracking-widest text-gray-400">
                   <th className="pb-2 pr-2">Service</th>
@@ -322,7 +323,8 @@ function InvoiceSidePanel({
                   <td className="py-2 text-right">{formatUSD(getInvoiceTotal(invoice))}</td>
                 </tr>
               </tfoot>
-            </table>
+              </table>
+            </div>
           </div>
         </div>
       </div>

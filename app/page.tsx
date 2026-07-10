@@ -204,7 +204,7 @@ function RevenueBar() {
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-600">
           <BarChart2 className="h-4 w-4 text-white" />
         </div>
-        <span className="text-sm font-semibold text-gray-700">Revenue Calculation Dashboard</span>
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-700">Revenue Calculation Dashboard</span>
         <span className="ml-auto text-gray-400">
           {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </span>
@@ -230,7 +230,7 @@ function ToolInventoryBar() {
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-sky-600">
           <Wrench className="h-4 w-4 text-white" />
         </div>
-        <span className="text-sm font-semibold text-gray-700">Tool Inventory Health</span>
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-700">Tool Inventory Health</span>
         <span className="ml-auto text-gray-400">
           {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </span>
@@ -256,7 +256,7 @@ function InvoiceBar() {
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-600">
           <Receipt className="h-4 w-4 text-white" />
         </div>
-        <span className="text-sm font-semibold text-gray-700">Invoice Dashboard</span>
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-700">Invoice Dashboard</span>
         <span className="ml-auto text-gray-400">
           {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </span>
@@ -294,11 +294,11 @@ function DashboardInner() {
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">
         <div className="mb-6">
-          <div className="flex gap-1 rounded-lg border border-gray-200 bg-white p-1 shadow-sm w-fit">
+          <div className="flex gap-1 overflow-x-auto rounded-lg border border-gray-200 bg-white p-1 shadow-sm w-full sm:w-fit">
             <button
               type="button"
               onClick={() => setActiveTab('ceo')}
-              className={`rounded-md px-5 py-1.5 text-sm font-medium transition-colors ${
+              className={`shrink-0 whitespace-nowrap rounded-md px-5 py-1.5 text-sm font-medium transition-colors ${
                 activeTab === 'ceo'
                   ? 'bg-indigo-600 text-white shadow-sm'
                   : 'text-gray-500 hover:text-gray-800'
@@ -309,7 +309,7 @@ function DashboardInner() {
             <button
               type="button"
               onClick={() => setActiveTab('manager')}
-              className={`rounded-md px-5 py-1.5 text-sm font-medium transition-colors ${
+              className={`shrink-0 whitespace-nowrap rounded-md px-5 py-1.5 text-sm font-medium transition-colors ${
                 activeTab === 'manager'
                   ? 'bg-indigo-600 text-white shadow-sm'
                   : 'text-gray-500 hover:text-gray-800'
@@ -320,7 +320,7 @@ function DashboardInner() {
             <button
               type="button"
               onClick={() => setActiveTab('timesheet')}
-              className={`rounded-md px-5 py-1.5 text-sm font-medium transition-colors ${
+              className={`shrink-0 whitespace-nowrap rounded-md px-5 py-1.5 text-sm font-medium transition-colors ${
                 activeTab === 'timesheet'
                   ? 'bg-indigo-600 text-white shadow-sm'
                   : 'text-gray-500 hover:text-gray-800'
@@ -331,7 +331,7 @@ function DashboardInner() {
             <button
               type="button"
               onClick={() => setActiveTab('scheduler')}
-              className={`flex items-center gap-1.5 rounded-md px-5 py-1.5 text-sm font-medium transition-colors ${
+              className={`shrink-0 whitespace-nowrap flex items-center gap-1.5 rounded-md px-5 py-1.5 text-sm font-medium transition-colors ${
                 activeTab === 'scheduler'
                   ? 'bg-indigo-600 text-white shadow-sm'
                   : 'text-gray-500 hover:text-gray-800'

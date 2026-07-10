@@ -249,12 +249,12 @@ function SubTabNav({ active, onChange }: { active: SubTab; onChange: (t: SubTab)
     { id: 'analytics',  label: 'Analytics'  },
   ];
   return (
-    <div className="mb-5 flex border-b border-gray-200">
+    <div className="mb-5 flex overflow-x-auto border-b border-gray-200">
       {tabs.map((t) => (
         <button
           key={t.id}
           onClick={() => onChange(t.id)}
-          className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+          className={`shrink-0 whitespace-nowrap px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
             active === t.id
               ? 'border-indigo-600 text-indigo-600'
               : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -380,8 +380,8 @@ function RecentFailures({ jobs, onSelectJob }: { jobs: SchedulerJob[]; onSelectJ
   ];
 
   return (
-    <div className="mt-6 grid grid-cols-5 gap-4">
-      <div className="col-span-3">
+    <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-5">
+      <div className="lg:col-span-3">
         <h3 className="mb-3 text-xs font-medium uppercase tracking-widest text-gray-400">Recent Failures</h3>
         <div className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white shadow-sm">
           {failed.length === 0 ? (
@@ -406,7 +406,7 @@ function RecentFailures({ jobs, onSelectJob }: { jobs: SchedulerJob[]; onSelectJ
         </div>
       </div>
 
-      <div className="col-span-2">
+      <div className="lg:col-span-2">
         <h3 className="mb-3 text-xs font-medium uppercase tracking-widest text-gray-400">Live Activity</h3>
         <div className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white shadow-sm">
           {liveEvents.map((ev, i) => (
@@ -759,34 +759,35 @@ function CalendarTab({ jobs, onSelectJob }: { jobs: SchedulerJob[]; onSelectJob:
   const upcomingToday = jobs.filter((j) => j.nextRun && isSameDay(j.nextRun, NOW)).sort((a, b) => (a.nextRun?.getTime() ?? 0) - (b.nextRun?.getTime() ?? 0));
 
   return (
-    <div className="flex gap-4">
+    <div className="flex flex-col gap-4 sm:flex-row">
       <div className="flex-1 min-w-0">
         <div className="mb-3 flex items-center justify-between">
           <button onClick={() => setCurrentMonth((m) => subMonths(m, 1))} className="rounded-lg border border-gray-200 p-1.5 hover:bg-gray-50"><ChevronLeft  className="h-4 w-4 text-gray-500" /></button>
           <h3 className="text-sm font-semibold text-gray-800">{format(currentMonth, 'MMMM yyyy')}</h3>
           <button onClick={() => setCurrentMonth((m) => addMonths(m, 1))} className="rounded-lg border border-gray-200 p-1.5 hover:bg-gray-50"><ChevronRight className="h-4 w-4 text-gray-500" /></button>
         </div>
-        <div className="grid grid-cols-7 mb-1">
-          {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((d) => (
-            <div key={d} className="text-center text-[10px] font-medium uppercase text-gray-400 py-1">{d}</div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7 gap-px bg-gray-200 rounded-xl overflow-hidden border border-gray-200">
-          {days.map((day) => {
-            const dayJobs        = jobsForDate(day);
-            const inMonth        = isSameMonth(day, currentMonth);
-            const isToday        = isSameDay(day, NOW);
-            const isSelected     = selectedDate && isSameDay(day, selectedDate);
-            const blackout       = isBlackout(day);
-            const hasLive        = dayJobs.some(isLiveJob);
-            const hasDepositLock = dayJobs.some((j) => j.paymentStatus === 'deposit_pending');
-            const hasStopWork    = dayJobs.some((j) => j.paymentStatus === 'invoice_overdue');
-            const isPaymentLocked = hasDepositLock || hasStopWork;
-            return (
-              <div
-                key={day.toISOString()}
-                className={[
-                  'relative p-1.5 min-h-[80px] transition-colors',
+        <div className="overflow-x-auto">
+          <div className="grid grid-cols-7 mb-1 min-w-[560px]">
+            {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((d) => (
+              <div key={d} className="text-center text-[10px] font-medium uppercase text-gray-400 py-1">{d}</div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-px bg-gray-200 rounded-xl overflow-hidden border border-gray-200 min-w-[560px]">
+            {days.map((day) => {
+              const dayJobs        = jobsForDate(day);
+              const inMonth        = isSameMonth(day, currentMonth);
+              const isToday        = isSameDay(day, NOW);
+              const isSelected     = selectedDate && isSameDay(day, selectedDate);
+              const blackout       = isBlackout(day);
+              const hasLive        = dayJobs.some(isLiveJob);
+              const hasDepositLock = dayJobs.some((j) => j.paymentStatus === 'deposit_pending');
+              const hasStopWork    = dayJobs.some((j) => j.paymentStatus === 'invoice_overdue');
+              const isPaymentLocked = hasDepositLock || hasStopWork;
+              return (
+                <div
+                  key={day.toISOString()}
+                  className={[
+                    'relative p-1 sm:p-1.5 min-h-[56px] sm:min-h-[80px] transition-colors',
                   !inMonth ? 'opacity-40' : '',
                   isPaymentLocked ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50',
                   isSelected ? 'ring-2 ring-inset ring-indigo-400' : '',
@@ -841,7 +842,8 @@ function CalendarTab({ jobs, onSelectJob }: { jobs: SchedulerJob[]; onSelectJob:
                 </div>
               </div>
             );
-          })}
+            })}
+          </div>
         </div>
 
         {/* Calendar legend */}
@@ -1004,7 +1006,7 @@ function AnalyticsTab({ jobs }: { jobs: SchedulerJob[] }) {
 
   return (
     <div>
-      <div className="mb-6 grid grid-cols-4 gap-3">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {kpis.map((k) => (
           <div key={k.label} className="rounded-xl border border-gray-200 bg-white shadow-sm p-4">
             <p className="text-xs font-medium uppercase tracking-widest text-gray-400">{k.label}</p>
@@ -1017,7 +1019,7 @@ function AnalyticsTab({ jobs }: { jobs: SchedulerJob[] }) {
         ))}
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4">
           <h3 className="mb-3 text-xs font-medium uppercase tracking-widest text-gray-400">Success vs Failure — 30 Days</h3>
           <ResponsiveContainer width="100%" height={200}>
@@ -1100,7 +1102,7 @@ function SidePanel({ job, jobs, onClose, onNavigate, onPaymentChange, onStatusCh
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/20" onClick={onClose} />
-      <div className="fixed right-0 top-0 z-50 flex h-full w-[40%] min-w-[360px] max-w-[600px] flex-col bg-white shadow-2xl">
+      <div className="fixed inset-y-0 right-0 z-50 flex h-full w-full flex-col bg-white shadow-2xl sm:w-[40%] sm:min-w-[360px] sm:max-w-[600px]">
         <div className="shrink-0 border-b border-gray-200 px-6 py-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">

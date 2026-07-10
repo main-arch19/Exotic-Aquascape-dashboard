@@ -252,7 +252,7 @@ function GlobalFilters({
           {parishOpen ? <ChevronUp className="h-3 w-3 text-gray-400" /> : <ChevronDown className="h-3 w-3 text-gray-400" />}
         </button>
         {parishOpen && (
-          <div className="absolute top-full left-0 mt-1 z-20 bg-white border border-gray-200 rounded-xl shadow-lg p-2 min-w-[180px] max-h-56 overflow-y-auto">
+          <div className="absolute top-full right-0 sm:left-0 sm:right-auto mt-1 z-20 bg-white border border-gray-200 rounded-xl shadow-lg p-2 min-w-[180px] max-w-[calc(100vw-2rem)] max-h-56 overflow-y-auto">
             {PARISHES.map(p => (
               <label key={p} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 cursor-pointer">
                 <input
@@ -281,7 +281,7 @@ function GlobalFilters({
           {channelOpen ? <ChevronUp className="h-3 w-3 text-gray-400" /> : <ChevronDown className="h-3 w-3 text-gray-400" />}
         </button>
         {channelOpen && (
-          <div className="absolute top-full left-0 mt-1 z-20 bg-white border border-gray-200 rounded-xl shadow-lg p-2 min-w-[160px]">
+          <div className="absolute top-full right-0 sm:left-0 sm:right-auto mt-1 z-20 bg-white border border-gray-200 rounded-xl shadow-lg p-2 min-w-[160px] max-w-[calc(100vw-2rem)]">
             {CHANNELS.map(c => (
               <label key={c} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 cursor-pointer">
                 <input
@@ -590,10 +590,10 @@ function ParishHeatmapTable({ rows }: { rows: ParishRow[] }) {
       <table className="w-full text-xs">
         <thead>
           <tr className="bg-gray-50 border-b border-gray-200">
-            <th className="px-3 py-2 text-left font-semibold text-gray-600">Parish</th>
-            <th className="px-3 py-2 text-right font-semibold text-gray-600">Net Revenue</th>
-            <th className="px-3 py-2 text-right font-semibold text-gray-600">Revenue Share</th>
-            <th className="px-3 py-2 text-right font-semibold text-gray-600">MoM</th>
+            <th className="px-2 py-1.5 sm:px-3 sm:py-2 text-left font-semibold text-gray-600">Parish</th>
+            <th className="px-2 py-1.5 sm:px-3 sm:py-2 text-right font-semibold text-gray-600">Net Revenue</th>
+            <th className="px-2 py-1.5 sm:px-3 sm:py-2 text-right font-semibold text-gray-600">Revenue Share</th>
+            <th className="px-2 py-1.5 sm:px-3 sm:py-2 text-right font-semibold text-gray-600">MoM</th>
           </tr>
         </thead>
         <tbody>
@@ -602,10 +602,10 @@ function ParishHeatmapTable({ rows }: { rows: ParishRow[] }) {
             const darkText = intensity > 0.55;
             return (
               <tr key={r.parish} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
-                <td className="px-3 py-2 font-medium text-gray-800">{r.parish}</td>
-                <td className="px-3 py-2 text-right text-gray-700">{formatJMD(r.totalNetRevenue)}</td>
+                <td className="px-2 py-1.5 sm:px-3 sm:py-2 font-medium text-gray-800">{r.parish}</td>
+                <td className="px-2 py-1.5 sm:px-3 sm:py-2 text-right text-gray-700">{formatJMD(r.totalNetRevenue)}</td>
                 <td
-                  className="px-3 py-2 text-right font-semibold rounded"
+                  className="px-2 py-1.5 sm:px-3 sm:py-2 text-right font-semibold rounded"
                   style={{
                     backgroundColor: `rgba(99,102,241,${intensity * 0.7})`,
                     color: darkText ? '#fff' : '#374151',
@@ -613,7 +613,7 @@ function ParishHeatmapTable({ rows }: { rows: ParishRow[] }) {
                 >
                   {formatPercent(r.revenueShare)}
                 </td>
-                <td className={`px-3 py-2 text-right font-medium ${trendColor(r.mom)}`}>
+                <td className={`px-2 py-1.5 sm:px-3 sm:py-2 text-right font-medium ${trendColor(r.mom)}`}>
                   {r.mom !== null ? trendLabel(r.mom) : '—'}
                 </td>
               </tr>
@@ -683,7 +683,7 @@ function ParishMatrix({ rows }: { rows: ParishRow[] }) {
       <table className="w-full text-xs">
         <thead>
           <tr className="bg-gray-50 border-b border-gray-200">
-            <th className="px-3 py-2.5 text-left font-semibold text-gray-600">Parish</th>
+            <th className="px-2 py-1.5 sm:px-3 sm:py-2.5 text-left font-semibold text-gray-600">Parish</th>
             <SortTh col="totalNetRevenue" label="Net Revenue" right />
             <SortTh col="transactionCount" label="Transactions" right />
             <SortTh col="aov" label="AOV" right />
@@ -697,15 +697,15 @@ function ParishMatrix({ rows }: { rows: ParishRow[] }) {
         <tbody>
           {sorted.map(r => (
             <tr key={r.parish} className="border-b border-gray-100 last:border-0 hover:bg-indigo-50/30">
-              <td className="px-3 py-2 font-medium text-gray-800 whitespace-nowrap">{r.parish}</td>
-              <td className="px-3 py-2 text-right text-gray-700">{formatJMD(r.totalNetRevenue)}</td>
-              <td className="px-3 py-2 text-right text-gray-700">{formatCount(r.transactionCount)}</td>
-              <td className="px-3 py-2 text-right text-gray-700">{formatJMD(r.aov)}</td>
-              <td className="px-3 py-2 text-right text-gray-700">{formatJMD(r.refundAmount)}</td>
-              <td className={`px-3 py-2 text-right font-medium ${r.refundRate > 10 ? 'text-red-600' : r.refundRate > 5 ? 'text-amber-600' : 'text-gray-700'}`}>
+              <td className="px-2 py-1.5 sm:px-3 sm:py-2 font-medium text-gray-800 whitespace-nowrap">{r.parish}</td>
+              <td className="px-2 py-1.5 sm:px-3 sm:py-2 text-right text-gray-700">{formatJMD(r.totalNetRevenue)}</td>
+              <td className="px-2 py-1.5 sm:px-3 sm:py-2 text-right text-gray-700">{formatCount(r.transactionCount)}</td>
+              <td className="px-2 py-1.5 sm:px-3 sm:py-2 text-right text-gray-700">{formatJMD(r.aov)}</td>
+              <td className="px-2 py-1.5 sm:px-3 sm:py-2 text-right text-gray-700">{formatJMD(r.refundAmount)}</td>
+              <td className={`px-2 py-1.5 sm:px-3 sm:py-2 text-right font-medium ${r.refundRate > 10 ? 'text-red-600' : r.refundRate > 5 ? 'text-amber-600' : 'text-gray-700'}`}>
                 {formatPercent(r.refundRate)}
               </td>
-              <td className="px-3 py-2 text-right text-gray-700">{formatPercent(r.revenueShare)}</td>
+              <td className="px-2 py-1.5 sm:px-3 sm:py-2 text-right text-gray-700">{formatPercent(r.revenueShare)}</td>
               <GrowthCell v={r.mom} />
               <GrowthCell v={r.yoy} />
             </tr>
@@ -713,15 +713,15 @@ function ParishMatrix({ rows }: { rows: ParishRow[] }) {
         </tbody>
         <tfoot>
           <tr className="bg-gray-50 border-t-2 border-gray-300 font-semibold">
-            <td className="px-3 py-2 text-gray-800">National Total</td>
-            <td className="px-3 py-2 text-right text-gray-800">{formatJMD(totals.totalNetRevenue)}</td>
-            <td className="px-3 py-2 text-right text-gray-800">{formatCount(totals.transactionCount)}</td>
-            <td className="px-3 py-2 text-right text-gray-500">—</td>
-            <td className="px-3 py-2 text-right text-gray-800">{formatJMD(totals.refundAmount)}</td>
-            <td className="px-3 py-2 text-right text-gray-500">—</td>
-            <td className="px-3 py-2 text-right text-gray-800">100%</td>
-            <td className="px-3 py-2 text-right text-gray-500">—</td>
-            <td className="px-3 py-2 text-right text-gray-500">—</td>
+            <td className="px-2 py-1.5 sm:px-3 sm:py-2 text-gray-800">National Total</td>
+            <td className="px-2 py-1.5 sm:px-3 sm:py-2 text-right text-gray-800">{formatJMD(totals.totalNetRevenue)}</td>
+            <td className="px-2 py-1.5 sm:px-3 sm:py-2 text-right text-gray-800">{formatCount(totals.transactionCount)}</td>
+            <td className="px-2 py-1.5 sm:px-3 sm:py-2 text-right text-gray-500">—</td>
+            <td className="px-2 py-1.5 sm:px-3 sm:py-2 text-right text-gray-800">{formatJMD(totals.refundAmount)}</td>
+            <td className="px-2 py-1.5 sm:px-3 sm:py-2 text-right text-gray-500">—</td>
+            <td className="px-2 py-1.5 sm:px-3 sm:py-2 text-right text-gray-800">100%</td>
+            <td className="px-2 py-1.5 sm:px-3 sm:py-2 text-right text-gray-500">—</td>
+            <td className="px-2 py-1.5 sm:px-3 sm:py-2 text-right text-gray-500">—</td>
           </tr>
         </tfoot>
       </table>
@@ -778,31 +778,31 @@ function TransactionDetail({ filtered }: { filtered: Transaction[] }) {
           <table className="w-full text-xs">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-3 py-2.5 text-left font-semibold text-gray-600">Date</th>
-                <th className="px-3 py-2.5 text-left font-semibold text-gray-600">Parish</th>
-                <th className="px-3 py-2.5 text-left font-semibold text-gray-600">Channel</th>
-                <th className="px-3 py-2.5 text-left font-semibold text-gray-600">Type</th>
-                <th className="px-3 py-2.5 text-right font-semibold text-gray-600">Gross</th>
-                <th className="px-3 py-2.5 text-right font-semibold text-gray-600">Refund</th>
-                <th className="px-3 py-2.5 text-right font-semibold text-gray-600">Net</th>
+                <th className="px-2 py-1.5 sm:px-3 sm:py-2.5 text-left font-semibold text-gray-600">Date</th>
+                <th className="px-2 py-1.5 sm:px-3 sm:py-2.5 text-left font-semibold text-gray-600">Parish</th>
+                <th className="px-2 py-1.5 sm:px-3 sm:py-2.5 text-left font-semibold text-gray-600">Channel</th>
+                <th className="px-2 py-1.5 sm:px-3 sm:py-2.5 text-left font-semibold text-gray-600">Type</th>
+                <th className="px-2 py-1.5 sm:px-3 sm:py-2.5 text-right font-semibold text-gray-600">Gross</th>
+                <th className="px-2 py-1.5 sm:px-3 sm:py-2.5 text-right font-semibold text-gray-600">Refund</th>
+                <th className="px-2 py-1.5 sm:px-3 sm:py-2.5 text-right font-semibold text-gray-600">Net</th>
               </tr>
             </thead>
             <tbody>
               {slice.map(t => (
                 <tr key={t.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
-                  <td className="px-3 py-2 text-gray-600">{t.date}</td>
-                  <td className="px-3 py-2 text-gray-700 whitespace-nowrap">{t.parish}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-1.5 sm:px-3 sm:py-2 text-gray-600">{t.date}</td>
+                  <td className="px-2 py-1.5 sm:px-3 sm:py-2 text-gray-700 whitespace-nowrap">{t.parish}</td>
+                  <td className="px-2 py-1.5 sm:px-3 sm:py-2">
                     <span className="inline-block px-1.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">{t.channel}</span>
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-1.5 sm:px-3 sm:py-2">
                     <span className={`inline-block px-1.5 py-0.5 rounded-full text-xs font-medium ${t.type === 'SALE' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
                       {t.type}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-right text-gray-700">{formatJMD(t.grossAmount)}</td>
-                  <td className="px-3 py-2 text-right text-red-500">{t.refundAmount > 0 ? formatJMD(t.refundAmount) : '—'}</td>
-                  <td className="px-3 py-2 text-right font-semibold text-gray-800">{formatJMD(t.netAmount)}</td>
+                  <td className="px-2 py-1.5 sm:px-3 sm:py-2 text-right text-gray-700">{formatJMD(t.grossAmount)}</td>
+                  <td className="px-2 py-1.5 sm:px-3 sm:py-2 text-right text-red-500">{t.refundAmount > 0 ? formatJMD(t.refundAmount) : '—'}</td>
+                  <td className="px-2 py-1.5 sm:px-3 sm:py-2 text-right font-semibold text-gray-800">{formatJMD(t.netAmount)}</td>
                 </tr>
               ))}
             </tbody>

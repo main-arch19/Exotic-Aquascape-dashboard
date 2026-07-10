@@ -78,7 +78,7 @@ export function WorkerClockPanel() {
               <button
                 disabled={isLoading}
                 onClick={() => handleClock(ws.workerId, isClockedIn ? 'punch-out' : 'punch-in')}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
+                className={`flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition-colors disabled:opacity-50 ${
                   isClockedIn
                     ? 'bg-red-50 text-red-600 hover:bg-red-100'
                     : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
