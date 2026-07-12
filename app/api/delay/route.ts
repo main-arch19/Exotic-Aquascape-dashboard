@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { triggerUpdate } from '@/lib/pusher-server';
 
 export async function POST(req: NextRequest) {
   const { workerId, reason } = await req.json();
@@ -39,6 +40,8 @@ export async function POST(req: NextRequest) {
       job_id: jobId,
       severity: 'warning',
     });
+
+    await triggerUpdate('state-changed');
 
     return NextResponse.json({ success: true });
   } catch (error) {

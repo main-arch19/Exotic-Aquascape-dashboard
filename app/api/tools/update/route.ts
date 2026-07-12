@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { triggerUpdate } from '@/lib/pusher-server';
 
 export async function POST(req: NextRequest) {
   const { toolId, name, category } = await req.json();
@@ -22,6 +23,8 @@ export async function POST(req: NextRequest) {
     if (error || !data) {
       return NextResponse.json({ error: 'Tool not found' }, { status: 404 });
     }
+
+    await triggerUpdate('state-changed');
 
     return NextResponse.json({ success: true, tool: data });
   } catch (error) {

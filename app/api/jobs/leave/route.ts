@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { sendPushNotification } from '@/lib/onesignal';
 import { sendEmail } from '@/lib/resend';
+import { triggerUpdate } from '@/lib/pusher-server';
 
 export async function POST(req: NextRequest) {
   const { jobId, workerId } = await req.json();
@@ -52,6 +53,8 @@ export async function POST(req: NextRequest) {
         `<p>Hi ${job.homeowner_name},</p><p>Your Exotic Aquascape cleaning job at ${job.address} is complete!</p><p>Our team is heading out now. Thank you for choosing us! 🐠</p>`
       );
     }
+
+    await triggerUpdate('state-changed');
 
     return NextResponse.json({ success: true });
   } catch (error) {

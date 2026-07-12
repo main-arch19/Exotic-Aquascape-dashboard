@@ -9,6 +9,7 @@ import {
   useState,
 } from 'react';
 import { DashboardState, EventLog } from '@/lib/types';
+import { getPusherClient } from '@/lib/pusher-client';
 
 interface DashboardContextValue extends DashboardState {
   events: EventLog[];
@@ -77,59 +78,23 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     })();
   }, [fetchState, fetchFeed]);
 
-  // Poll feed every 4 s
+  // Subscribe to Pusher real-time updates
   useEffect(() => {
-    const id = setInterval(fetchFeed, 4_000);
-    return () => clearInterval(id);
-  }, [fetchFeed]);
+    const pusher = getPusherClient();
+    const channel = pusher.subscribe('dashboard');
 
-  // Simulate random field-worker events every 8–14 s for demo realism
-  useEffect(() => {
-    const simulate = async () => {
-      const workers = ['w1', 'w2', 'w3', 'w4', 'w5', 'w7', 'w8'];
-      const reasons = [
-        'Heavy traffic on I-95',
-        'Client not home yet',
-        'Equipment issue on site',
-        'Flat tire on US-1',
-        'Waiting for gate code from homeowner',
-        'Supply pickup delay',
-      ];
-      const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
-
-      const roll = Math.random();
-      if (roll < 0.3) {
-        await fetch('/api/delay', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ workerId: pick(workers), reason: pick(reasons) }),
-        });
-      } else if (roll < 0.65) {
-        await fetch('/api/tools/checkout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ workerId: pick(workers), toolId: pick(['t3', 't5', 't8', 't10', 't12']) }),
-        });
-      } else {
-        await fetch('/api/tools/return', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ workerId: pick(workers), toolId: pick(['t1', 't2', 't4', 't6', 't7', 't9', 't11']) }),
-        });
-      }
+    const handleStateChanged = () => {
+      fetchState();
+      fetchFeed();
     };
 
-    const schedule = () => {
-      const delay = 8_000 + Math.random() * 6_000;
-      return setTimeout(async () => {
-        await simulate();
-        timerId = schedule();
-      }, delay);
-    };
+    channel.bind('state-changed', handleStateChanged);
 
-    let timerId = schedule();
-    return () => clearTimeout(timerId);
-  }, []);
+    return () => {
+      channel.unbind('state-changed', handleStateChanged);
+      pusher.unsubscribe('dashboard');
+    };
+  }, [fetchState, fetchFeed]);
 
   return (
     <DashboardContext.Provider value={{ ...state, events, refresh, isLoading }}>

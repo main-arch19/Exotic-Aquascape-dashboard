@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { triggerUpdate } from '@/lib/pusher-server';
 
 export async function POST(req: NextRequest) {
   const { workerId, toolId } = await req.json();
@@ -46,6 +47,8 @@ export async function POST(req: NextRequest) {
       message: `${workerRes.data.worker_name} checked out ${toolRes.data.name}`,
       severity: 'info',
     });
+
+    await triggerUpdate('state-changed');
 
     return NextResponse.json({ success: true, tool: toolRes.data });
   } catch (error) {
