@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 import { db } from '@/lib/mock-db';
 import { Job } from '@/lib/types';
 
@@ -10,40 +11,93 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
-  const job: Job = {
-    id: Math.random().toString(36).slice(2, 10),
-    homeownerName,
-    address,
-    scheduledTime,
-    assignedWorkerIds: assignedWorkerIds ?? [],
-    status: 'scheduled',
-    createdAt: new Date().toISOString(),
-  };
+  const jobId = Math.random().toString(36).slice(2, 10);
+  const now = new Date().toISOString();
 
-  db.jobs.unshift(job);
+  try {
+    const supabase = await createServiceRoleClient();
 
-  // Update assigned workers' pending state
-  for (const wId of job.assignedWorkerIds) {
-    const ws = db.getWorkerStatus(wId);
-    if (ws && ws.jobState === 'idle') {
-      ws.jobState = 'pending';
-      ws.currentJobId = job.id;
+    // Insert into jobs table
+    const { error: jobError } = await supabase.from('jobs').insert({
+      id: jobId,
+      homeowner_name: homeownerName,
+      address,
+      scheduled_time: scheduledTime,
+      status: 'scheduled',
+      created_at: now,
+    });
+
+    if (jobError) throw jobError;
+
+    // Insert job-worker associations
+    if (assignedWorkerIds?.length) {
+      const jobWorkerPairs = assignedWorkerIds.map((workerId: string) => ({
+        job_id: jobId,
+        worker_id: workerId,
+      }));
+
+      const { error: jwError } = await supabase
+        .from('jobs_workers')
+        .insert(jobWorkerPairs);
+
+      if (jwError) throw jwError;
     }
+
+    // Log event
+    await supabase.from('event_logs').insert({
+      id: Math.random().toString(36).slice(2, 10),
+      timestamp: now,
+      type: 'job_created',
+      worker_id: 'system',
+      worker_name: 'System',
+      message: `New job created for ${homeownerName} at ${address}`,
+      job_id: jobId,
+      severity: 'info',
+    });
+
+    const job: Job = {
+      id: jobId,
+      homeownerName,
+      address,
+      scheduledTime,
+      assignedWorkerIds: assignedWorkerIds ?? [],
+      status: 'scheduled',
+      createdAt: now,
+    };
+
+    return NextResponse.json({ success: true, job });
+  } catch (error) {
+    console.error('Error creating job in Supabase:', error);
+    // Fall back to mock
+    const job: Job = {
+      id: jobId,
+      homeownerName,
+      address,
+      scheduledTime,
+      assignedWorkerIds: assignedWorkerIds ?? [],
+      status: 'scheduled',
+      createdAt: now,
+    };
+
+    db.jobs.unshift(job);
+
+    for (const wId of job.assignedWorkerIds) {
+      const ws = db.getWorkerStatus(wId);
+      if (ws && ws.jobState === 'idle') {
+        ws.jobState = 'pending';
+        ws.currentJobId = job.id;
+      }
+    }
+
+    db.addEvent({
+      type: 'job_created',
+      workerId: 'system',
+      workerName: 'System',
+      message: `New job created for ${homeownerName} at ${address}`,
+      jobId: job.id,
+      severity: 'info',
+    });
+
+    return NextResponse.json({ success: true, job });
   }
-
-  const assignedNames = job.assignedWorkerIds
-    .map((id) => db.getWorkerStatus(id)?.workerName)
-    .filter(Boolean)
-    .join(', ');
-
-  db.addEvent({
-    type: 'job_created',
-    workerId: 'system',
-    workerName: 'System',
-    message: `New job created for ${homeownerName} at ${address}${assignedNames ? ` — assigned to ${assignedNames}` : ''}`,
-    jobId: job.id,
-    severity: 'info',
-  });
-
-  return NextResponse.json({ success: true, job });
 }

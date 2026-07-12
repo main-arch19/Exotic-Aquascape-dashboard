@@ -21,25 +21,27 @@ export async function sendPushNotification(
     // production: include `include_external_user_ids` or `include_player_ids`
   };
 
-  console.log(`\n[OneSignal] ✉  Notification dispatched`);
+  console.log(`\n[OneSignal] ✉  Sending notification`);
   console.log(`[OneSignal]    To      : ${recipientName ?? 'homeowner'}`);
   console.log(`[OneSignal]    Message : "${message}"`);
-  console.log(`[OneSignal]    Payload :`, JSON.stringify(payload, null, 2));
 
-  /*
-   * Real implementation (uncomment when ONESIGNAL_REST_API_KEY is set):
-   *
-   * const res = await fetch('https://onesignal.com/api/v1/notifications', {
-   *   method: 'POST',
-   *   headers: {
-   *     'Content-Type': 'application/json',
-   *     Authorization: `Basic ${process.env.ONESIGNAL_REST_API_KEY}`,
-   *   },
-   *   body: JSON.stringify(payload),
-   * });
-   * const data = await res.json();
-   * return { success: res.ok, notificationId: data.id };
-   */
+  const res = await fetch('https://onesignal.com/api/v1/notifications', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Basic ${process.env.ONESIGNAL_REST_API_KEY}`,
+    },
+    body: JSON.stringify(payload),
+  });
 
-  return { success: true, notificationId: crypto.randomUUID() };
+  if (!res.ok) {
+    console.error(`[OneSignal] ✗ Failed:`, res.status, res.statusText);
+    const error = await res.text();
+    console.error(`[OneSignal]    Error:`, error);
+    return { success: false, notificationId: '' };
+  }
+
+  const data = await res.json();
+  console.log(`[OneSignal] ✓ Sent (ID: ${data.id})`);
+  return { success: res.ok, notificationId: data.id };
 }
