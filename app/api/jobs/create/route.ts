@@ -4,7 +4,7 @@ import { Job } from '@/lib/types';
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { homeownerName, address, scheduledTime, assignedWorkerIds } = body;
+  const { homeownerName, address, scheduledTime, assignedWorkerIds, homeownerEmail } = body;
 
   if (!homeownerName || !address || !scheduledTime) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
       homeowner_name: homeownerName,
       address,
       scheduled_time: scheduledTime,
+      homeowner_email: homeownerEmail || null,
       status: 'scheduled',
       created_at: now,
     });
@@ -62,6 +63,7 @@ export async function POST(req: NextRequest) {
       assignedWorkerIds: assignedWorkerIds ?? [],
       status: 'scheduled',
       createdAt: now,
+      homeownerEmail: homeownerEmail || undefined,
     };
 
     return NextResponse.json({ success: true, job });

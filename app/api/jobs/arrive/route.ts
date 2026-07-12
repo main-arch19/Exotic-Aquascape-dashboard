@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { sendPushNotification } from '@/lib/onesignal';
+import { sendEmail } from '@/lib/resend';
 
 export async function POST(req: NextRequest) {
   const { jobId, workerId, location } = await req.json();
@@ -47,6 +48,14 @@ export async function POST(req: NextRequest) {
       'Your Exotic Aquascape cleaning team has arrived! 🐠',
       job.homeowner_name
     );
+
+    if (job.homeowner_email) {
+      await sendEmail(
+        job.homeowner_email,
+        'Your Exotic Aquascape team has arrived',
+        `<p>Hi ${job.homeowner_name},</p><p>Your Exotic Aquascape cleaning team has arrived at ${location || job.address}!</p><p>We'll have your aquascape looking beautiful soon.</p>`
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

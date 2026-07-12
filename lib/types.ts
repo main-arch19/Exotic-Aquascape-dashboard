@@ -36,6 +36,7 @@ export interface Job {
   assignedWorkerIds: string[];
   status: JobStatus;
   createdAt: string;
+  homeownerEmail?: string;
 }
 
 export interface Tool {

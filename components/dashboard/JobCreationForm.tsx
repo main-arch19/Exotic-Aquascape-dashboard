@@ -23,6 +23,7 @@ export function JobCreationForm() {
   const { refresh } = useDashboard();
   const [open, setOpen] = useState(true);
   const [homeownerName, setHomeownerName] = useState('');
+  const [homeownerEmail, setHomeownerEmail] = useState('');
   const [address, setAddress] = useState('');
   const [scheduledTime, setScheduledTime] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
@@ -50,9 +51,10 @@ export function JobCreationForm() {
       await fetch('/api/jobs/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ homeownerName, address, scheduledTime, assignedWorkerIds: selected }),
+        body: JSON.stringify({ homeownerName, homeownerEmail, address, scheduledTime, assignedWorkerIds: selected }),
       });
       setHomeownerName('');
+      setHomeownerEmail('');
       setAddress('');
       setScheduledTime('');
       setSelected([]);
@@ -92,6 +94,16 @@ export function JobCreationForm() {
                     className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-400"
                   />
                   {errors.homeownerName && <p className="text-xs text-red-500">{errors.homeownerName}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-gray-500">Email (optional)</Label>
+                  <input
+                    type="email"
+                    value={homeownerEmail}
+                    onChange={(e) => setHomeownerEmail(e.target.value)}
+                    placeholder="e.g. jane@example.com"
+                    className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs text-gray-500">Scheduled Time</Label>
