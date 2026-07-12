@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { db } from '@/lib/mock-db';
 
 export async function GET() {
   try {
@@ -14,37 +13,31 @@ export async function GET() {
       supabase.from('timesheets').select('*'),
     ]);
 
-    // If Supabase has data, use it; otherwise fall back to mock
-    const workerStatuses = workerStatusesRes.data?.length
-      ? workerStatusesRes.data
-      : db.workerStatuses;
+    const workerStatuses = workerStatusesRes.data || [];
+    const jobs = (jobsRes.data || []).map((job: any) => ({
+      ...job,
+      assignedWorkerIds: job.jobs_workers?.map((jw: any) => jw.worker_id) || [],
+    }));
+    const tools = toolsRes.data || [];
+    const timesheets = timesheetsRes.data || [];
 
-    const jobs = jobsRes.data?.length
-      ? jobsRes.data.map((job: any) => ({
-          ...job,
-          assignedWorkerIds: job.jobs_workers?.map((jw: any) => jw.worker_id) || [],
-        }))
-      : db.jobs;
-
-    const tools = toolsRes.data?.length ? toolsRes.data : db.tools;
-    const timesheets = timesheetsRes.data?.length ? timesheetsRes.data : db.timesheets;
+    // Calculate KPIs from real data
+    const activeJobs = jobs.filter((j: any) => j.status === 'in_progress').length;
+    const toolsCheckedOut = tools.filter((t: any) => t.status === 'checked_out').length;
+    const delaysToday = jobs.filter((j: any) => j.status === 'delayed').length;
 
     return NextResponse.json({
       workerStatuses,
       jobs,
       tools,
       timesheets,
-      kpis: db.getKPIs(), // KPI logic stays in mock for now
+      kpis: { activeJobs, toolsCheckedOut, delaysToday },
     });
   } catch (error) {
     console.error('Error fetching state from Supabase:', error);
-    // Fall back to mock on error
-    return NextResponse.json({
-      workerStatuses: db.workerStatuses,
-      jobs: db.jobs,
-      tools: db.tools,
-      timesheets: db.timesheets,
-      kpis: db.getKPIs(),
-    });
+    return NextResponse.json(
+      { error: 'Failed to fetch state' },
+      { status: 500 }
+    );
   }
 }

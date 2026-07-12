@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/mock-db';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 
 export async function POST(req: NextRequest) {
   const { toolId } = await req.json();
   if (!toolId) return NextResponse.json({ error: 'toolId required' }, { status: 400 });
-  const ok = db.removeTool(toolId);
-  if (!ok) return NextResponse.json({ error: 'Tool not found' }, { status: 404 });
-  return NextResponse.json({ success: true });
+
+  try {
+    const supabase = await createServiceRoleClient();
+
+    const { error } = await supabase.from('tools').delete().eq('id', toolId);
+
+    if (error) {
+      return NextResponse.json({ error: 'Tool not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting tool:', error);
+    return NextResponse.json({ error: 'Failed to delete tool' }, { status: 500 });
+  }
 }

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { db } from '@/lib/mock-db';
 import { Job } from '@/lib/types';
 
 export async function POST(req: NextRequest) {
@@ -67,37 +66,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, job });
   } catch (error) {
-    console.error('Error creating job in Supabase:', error);
-    // Fall back to mock
-    const job: Job = {
-      id: jobId,
-      homeownerName,
-      address,
-      scheduledTime,
-      assignedWorkerIds: assignedWorkerIds ?? [],
-      status: 'scheduled',
-      createdAt: now,
-    };
-
-    db.jobs.unshift(job);
-
-    for (const wId of job.assignedWorkerIds) {
-      const ws = db.getWorkerStatus(wId);
-      if (ws && ws.jobState === 'idle') {
-        ws.jobState = 'pending';
-        ws.currentJobId = job.id;
-      }
-    }
-
-    db.addEvent({
-      type: 'job_created',
-      workerId: 'system',
-      workerName: 'System',
-      message: `New job created for ${homeownerName} at ${address}`,
-      jobId: job.id,
-      severity: 'info',
-    });
-
-    return NextResponse.json({ success: true, job });
+    console.error('Error creating job:', error);
+    return NextResponse.json(
+      { error: 'Failed to create job' },
+      { status: 500 }
+    );
   }
 }

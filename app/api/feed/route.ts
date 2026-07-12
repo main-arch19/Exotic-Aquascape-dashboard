@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { db } from '@/lib/mock-db';
 
 export async function GET() {
   try {
@@ -12,14 +11,16 @@ export async function GET() {
       .order('timestamp', { ascending: false })
       .limit(30);
 
-    if (error || !data?.length) {
-      // Fall back to mock
-      const events = db.events.slice(0, 30);
-      return NextResponse.json({ events });
+    if (error) {
+      console.error('Supabase error:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch events' },
+        { status: 500 }
+      );
     }
 
     // Map Supabase format to EventLog
-    const events = data.map((row: any) => ({
+    const events = (data || []).map((row: any) => ({
       id: row.id,
       timestamp: row.timestamp,
       type: row.type,
@@ -32,9 +33,10 @@ export async function GET() {
 
     return NextResponse.json({ events });
   } catch (error) {
-    console.error('Error fetching feed from Supabase:', error);
-    // Fall back to mock
-    const events = db.events.slice(0, 30);
-    return NextResponse.json({ events });
+    console.error('Error fetching feed:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
