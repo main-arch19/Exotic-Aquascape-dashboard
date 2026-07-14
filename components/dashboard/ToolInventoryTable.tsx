@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Wrench, Loader2 } from 'lucide-react';
+import { Wrench, Loader2, PlusCircle, ChevronUp, CheckCircle2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
@@ -29,9 +31,47 @@ export function ToolInventoryTable() {
   const [selectedWorker, setSelectedWorker] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState<Record<string, string>>({});
 
+  // Add tool form state
+  const [showForm, setShowForm] = useState(false);
+  const [toolName, setToolName] = useState('');
+  const [toolCategory, setToolCategory] = useState('');
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [createSuccess, setCreateSuccess] = useState(false);
+
   const setFeedbackTimed = (toolId: string, msg: string) => {
     setFeedback((f) => ({ ...f, [toolId]: msg }));
     setTimeout(() => setFeedback((f) => { const n = { ...f }; delete n[toolId]; return n; }), 2500);
+  };
+
+  const validateForm = () => {
+    const errs: Record<string, string> = {};
+    if (toolName.trim().length < 2) errs.toolName = 'Tool name is required';
+    if (toolCategory.trim().length < 2) errs.toolCategory = 'Category is required';
+    setFormErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+    setSubmitting(true);
+    try {
+      await fetch('/api/tools/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: toolName, category: toolCategory }),
+      });
+      setToolName('');
+      setToolCategory('');
+      setFormErrors({});
+      setShowForm(false);
+      setCreateSuccess(true);
+      await refresh();
+      setTimeout(() => setCreateSuccess(false), 3000);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleReturn = async (toolId: string, workerId: string) => {
@@ -77,8 +117,57 @@ export function ToolInventoryTable() {
         <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-gray-500">
           <Wrench className="h-4 w-4 text-sky-500" />
           Tool Inventory
+          <div className="ml-auto flex items-center gap-2">
+            {createSuccess && (
+              <span className="flex items-center gap-1 text-xs font-normal normal-case tracking-normal text-emerald-600">
+                <CheckCircle2 className="h-3.5 w-3.5" />Tool added!
+              </span>
+            )}
+            <button
+              onClick={() => setShowForm((o) => !o)}
+              className="flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold normal-case tracking-normal text-indigo-700 transition-colors hover:bg-indigo-100"
+            >
+              {showForm ? <><ChevronUp className="h-3.5 w-3.5" />Cancel</> : <><PlusCircle className="h-3.5 w-3.5" />Add Tool</>}
+            </button>
+          </div>
         </CardTitle>
       </CardHeader>
+
+      {showForm && (
+        <>
+          <Separator className="bg-gray-100" />
+          <CardContent className="pt-5">
+            <form onSubmit={onSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-gray-500">Tool Name</Label>
+                  <input
+                    value={toolName}
+                    onChange={(e) => setToolName(e.target.value)}
+                    placeholder="e.g. Pressure Washer"
+                    className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                  />
+                  {formErrors.toolName && <p className="text-xs text-red-500">{formErrors.toolName}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-gray-500">Category</Label>
+                  <input
+                    value={toolCategory}
+                    onChange={(e) => setToolCategory(e.target.value)}
+                    placeholder="e.g. Cleaning Equipment"
+                    className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                  />
+                  {formErrors.toolCategory && <p className="text-xs text-red-500">{formErrors.toolCategory}</p>}
+                </div>
+              </div>
+              <Button type="submit" disabled={submitting} className="bg-indigo-600 text-white hover:bg-indigo-500">
+                {submitting ? 'Adding…' : 'Add Tool'}
+              </Button>
+            </form>
+          </CardContent>
+        </>
+      )}
+
       <Separator className="bg-gray-100" />
       <CardContent className="p-0">
         <Table>

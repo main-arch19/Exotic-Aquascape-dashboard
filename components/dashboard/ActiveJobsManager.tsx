@@ -287,7 +287,7 @@ export function ActiveJobsManager() {
                       className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       {actionLoading === `${job.id}-arrive` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Home className="h-3.5 w-3.5" />}
-                      We&apos;re Here
+                      Arrive
                     </button>
                     <button
                       disabled={!!actionLoading}
@@ -295,7 +295,7 @@ export function ActiveJobsManager() {
                       className="flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700 transition-colors hover:bg-sky-100 disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       {actionLoading === `${job.id}-leave` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LogOut className="h-3.5 w-3.5" />}
-                      Leaving
+                      Leave
                     </button>
                     <button
                       disabled={!!actionLoading}
