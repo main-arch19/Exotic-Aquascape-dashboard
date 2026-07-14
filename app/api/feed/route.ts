@@ -2,6 +2,16 @@ import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 
 export async function GET() {
+  const missing = (['NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'] as const)
+    .filter((k) => !process.env[k]);
+  if (missing.length > 0) {
+    console.error('Missing Supabase env vars:', missing);
+    return NextResponse.json(
+      { error: 'Missing Supabase env vars', missing },
+      { status: 500 }
+    );
+  }
+
   try {
     const supabase = await createServiceRoleClient();
 
@@ -14,7 +24,7 @@ export async function GET() {
     if (error) {
       console.error('Supabase error:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch events' },
+        { error: 'Failed to fetch events', detail: error.message },
         { status: 500 }
       );
     }
@@ -35,7 +45,10 @@ export async function GET() {
   } catch (error) {
     console.error('Error fetching feed:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      {
+        error: 'Internal server error',
+        detail: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
     );
   }

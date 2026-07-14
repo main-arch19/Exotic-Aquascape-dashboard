@@ -2,6 +2,18 @@ import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 
 export async function GET() {
+  // Surface missing config directly — createServiceRoleClient() would otherwise
+  // throw a cryptic "supabaseUrl is required" that gets flattened into a generic 500.
+  const missing = (['NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'] as const)
+    .filter((k) => !process.env[k]);
+  if (missing.length > 0) {
+    console.error('Missing Supabase env vars:', missing);
+    return NextResponse.json(
+      { error: 'Missing Supabase env vars', missing },
+      { status: 500 }
+    );
+  }
+
   try {
     const supabase = await createServiceRoleClient();
 
@@ -12,6 +24,15 @@ export async function GET() {
       supabase.from('tools').select('*'),
       supabase.from('timesheets').select('*'),
     ]);
+
+    // Supabase resolves { data, error } instead of throwing — a failed query would
+    // otherwise be swallowed into an empty array and returned as a misleading 200.
+    const queryError =
+      (workerStatusesRes.error && `worker_statuses: ${workerStatusesRes.error.message}`) ||
+      (jobsRes.error && `jobs: ${jobsRes.error.message}`) ||
+      (toolsRes.error && `tools: ${toolsRes.error.message}`) ||
+      (timesheetsRes.error && `timesheets: ${timesheetsRes.error.message}`);
+    if (queryError) throw new Error(queryError);
 
     const workerStatuses = (workerStatusesRes.data || []).map((w: any) => ({
       workerId: w.worker_id,
@@ -67,7 +88,10 @@ export async function GET() {
   } catch (error) {
     console.error('Error fetching state from Supabase:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch state' },
+      {
+        error: 'Failed to fetch state',
+        detail: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
     );
   }
