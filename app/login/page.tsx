@@ -9,7 +9,6 @@ type Mode = 'signin' | 'signup';
 
 export default function LoginPage() {
   const router = useRouter();
-  const supabase = createClient();
 
   const [mode, setMode] = useState<Mode>('signin');
   const [name, setName] = useState('');
@@ -24,6 +23,9 @@ export default function LoginPage() {
     setError(null);
     setNotice(null);
     setSubmitting(true);
+    // Created here (not during render) so it never runs during static
+    // prerendering, where NEXT_PUBLIC_* env vars may be absent at build time.
+    const supabase = createClient();
     try {
       if (mode === 'signin') {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
