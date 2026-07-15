@@ -31,7 +31,7 @@ function statusBadge(status: JobStatus) {
   }
 }
 
-export function ActiveJobsManager() {
+export function ActiveJobsManager({ hideAdd = false }: { hideAdd?: boolean } = {}) {
   const { jobs, workerStatuses, refresh } = useDashboard();
 
   // Create form state
@@ -170,19 +170,21 @@ export function ActiveJobsManager() {
           <Briefcase className="h-4 w-4 text-indigo-500" />
           Active Jobs Today
           <span className="text-xs font-normal normal-case tracking-normal text-gray-400">{activeJobs.length} jobs</span>
-          <div className="ml-auto flex items-center gap-2">
-            {createSuccess && (
-              <span className="flex items-center gap-1 text-xs font-normal normal-case tracking-normal text-emerald-600">
-                <CheckCircle2 className="h-3.5 w-3.5" />Job created!
-              </span>
-            )}
-            <button
-              onClick={() => setShowForm((o) => !o)}
-              className="flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold normal-case tracking-normal text-indigo-700 transition-colors hover:bg-indigo-100"
-            >
-              {showForm ? <><ChevronUp className="h-3.5 w-3.5" />Cancel</> : <><PlusCircle className="h-3.5 w-3.5" />New Job</>}
-            </button>
-          </div>
+          {!hideAdd && (
+            <div className="ml-auto flex items-center gap-2">
+              {createSuccess && (
+                <span className="flex items-center gap-1 text-xs font-normal normal-case tracking-normal text-emerald-600">
+                  <CheckCircle2 className="h-3.5 w-3.5" />Job created!
+                </span>
+              )}
+              <button
+                onClick={() => setShowForm((o) => !o)}
+                className="flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold normal-case tracking-normal text-indigo-700 transition-colors hover:bg-indigo-100"
+              >
+                {showForm ? <><ChevronUp className="h-3.5 w-3.5" />Cancel</> : <><PlusCircle className="h-3.5 w-3.5" />New Job</>}
+              </button>
+            </div>
+          )}
         </CardTitle>
       </CardHeader>
 

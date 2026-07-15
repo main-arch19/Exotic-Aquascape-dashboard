@@ -82,3 +82,46 @@ export interface DashboardState {
   timesheets: TimeRecord[];
   kpis: KPIs;
 }
+
+// Authenticated user surfaced to the client via /api/me.
+export interface CurrentUser {
+  id: string;
+  name: string;
+  role: 'ceo' | 'manager' | 'worker';
+  avatarUrl?: string;
+}
+
+// The shapes below intentionally match what the vue-advanced-chat web component
+// expects for its `rooms` and `messages` props, so API responses can be passed
+// through with minimal massaging.
+export interface ChatRoomUser {
+  _id: string;
+  username: string;
+  avatar?: string;
+}
+
+export interface ChatRoom {
+  roomId: string;
+  roomName: string;
+  users: ChatRoomUser[];
+  lastMessage?: {
+    _id: string;
+    content: string;
+    senderId: string;
+    username: string;
+    timestamp: string;
+  };
+}
+
+// API shape for a chat message. Carries an ISO `createdAt`; the client formats
+// the vue-advanced-chat `date`/`timestamp` display labels in the viewer's own
+// timezone before handing them to the web component.
+export interface ChatMessageDTO {
+  _id: string;
+  roomId: string;
+  content: string;
+  senderId: string;
+  username: string;
+  createdAt: string; // ISO 8601
+  deleted?: boolean;
+}
