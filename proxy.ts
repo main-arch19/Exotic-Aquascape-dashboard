@@ -1,9 +1,14 @@
-import { type NextRequest } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
+
+// TEMP: login is paused — the whole app is reachable without signing in.
+// Flip AUTH_PAUSED back to false to restore the auth gate + session refresh.
+const AUTH_PAUSED = true;
 
 // Next.js 16 renamed the `middleware` file convention to `proxy`. The exported
 // function must be named `proxy` (or be the default export).
 export async function proxy(request: NextRequest) {
+  if (AUTH_PAUSED) return NextResponse.next();
   return await updateSession(request);
 }
 
