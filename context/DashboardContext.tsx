@@ -81,6 +81,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   // Subscribe to Pusher real-time updates
   useEffect(() => {
     const pusher = getPusherClient();
+    if (!pusher) return; // Pusher not configured — skip realtime, don't crash
     const channel = pusher.subscribe('dashboard');
 
     const handleStateChanged = () => {

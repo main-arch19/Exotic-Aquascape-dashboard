@@ -116,6 +116,7 @@ export function TeamChat() {
   // Real-time: refetch when a chat-message event fires for our room.
   useEffect(() => {
     const pusher = getPusherClient();
+    if (!pusher) return; // Pusher not configured — skip realtime, don't crash
     const channel = pusher.subscribe('dashboard');
     const handler = (data: { roomId?: string }) => {
       if (!data?.roomId || data.roomId === roomId) loadMessages();
