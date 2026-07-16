@@ -20,6 +20,7 @@ interface DashboardContextValue extends DashboardState {
 const DashboardContext = createContext<DashboardContextValue | null>(null);
 
 const EMPTY_STATE: DashboardState = {
+  users: [],
   workerStatuses: [],
   jobs: [],
   tools: [],

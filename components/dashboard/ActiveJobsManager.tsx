@@ -11,17 +11,6 @@ import { Button } from '@/components/ui/button';
 import { useDashboard } from '@/context/DashboardContext';
 import { JobStatus } from '@/lib/types';
 
-const WORKERS = [
-  { id: 'w1', name: 'Marcus Rivera' },
-  { id: 'w2', name: 'Priya Nair' },
-  { id: 'w3', name: 'Devon Chang' },
-  { id: 'w4', name: 'Aisha Thompson' },
-  { id: 'w5', name: "Liam O'Brien" },
-  { id: 'w6', name: 'Sofia Morales' },
-  { id: 'w7', name: 'Trent Wallace' },
-  { id: 'w8', name: 'Keisha Fontaine' },
-];
-
 function statusBadge(status: JobStatus) {
   switch (status) {
     case 'in_progress': return <Badge className="border-0 bg-emerald-100 text-emerald-700">In Progress</Badge>;
@@ -32,7 +21,8 @@ function statusBadge(status: JobStatus) {
 }
 
 export function ActiveJobsManager({ hideAdd = false }: { hideAdd?: boolean } = {}) {
-  const { jobs, workerStatuses, refresh } = useDashboard();
+  const { jobs, workerStatuses, users, refresh } = useDashboard();
+  const WORKERS = users;
 
   // Create form state
   const [showForm, setShowForm] = useState(false);

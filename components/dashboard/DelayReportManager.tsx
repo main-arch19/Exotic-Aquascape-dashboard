@@ -10,19 +10,9 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useDashboard } from '@/context/DashboardContext';
 
-const WORKERS = [
-  { id: 'w1', name: 'Marcus Rivera' },
-  { id: 'w2', name: 'Priya Nair' },
-  { id: 'w3', name: 'Devon Chang' },
-  { id: 'w4', name: 'Aisha Thompson' },
-  { id: 'w5', name: "Liam O'Brien" },
-  { id: 'w6', name: 'Sofia Morales' },
-  { id: 'w7', name: 'Trent Wallace' },
-  { id: 'w8', name: 'Keisha Fontaine' },
-];
-
 export function DelayReportManager() {
-  const { events, refresh } = useDashboard();
+  const { events, users, refresh } = useDashboard();
+  const WORKERS = users;
   const [showForm, setShowForm] = useState(false);
   const [workerId, setWorkerId] = useState('');
   const [reason, setReason] = useState('');

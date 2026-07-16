@@ -15,22 +15,10 @@ import { Section } from '@/components/ui/section';
 
 type Tab = 'ceo' | 'manager' | 'agent' | 'timesheet' | 'scheduler';
 
-const MANAGERS = [
-  { id: 'w6', name: 'Sofia Morales' },
-  { id: 'w4', name: 'Aisha Thompson' },
-];
-
-const WORKERS = [
-  { id: 'w1', name: 'Marcus Rivera' },
-  { id: 'w2', name: 'Priya Nair' },
-  { id: 'w3', name: 'Devon Chang' },
-  { id: 'w5', name: "Liam O'Brien" },
-  { id: 'w7', name: 'Trent Wallace' },
-  { id: 'w8', name: 'Keisha Fontaine' },
-];
-
 function QuickJobForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
-  const { refresh } = useDashboard();
+  const { users, refresh } = useDashboard();
+  const MANAGERS = users.filter((u) => u.role === 'manager');
+  const WORKERS = users.filter((u) => u.role === 'worker');
   const [homeowner, setHomeowner] = useState('');
   const [address, setAddress] = useState('');
   const [arrivalTime, setArrivalTime] = useState('');

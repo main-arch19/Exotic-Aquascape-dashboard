@@ -76,6 +76,7 @@ export interface KPIs {
 }
 
 export interface DashboardState {
+  users: User[];
   workerStatuses: WorkerStatus[];
   jobs: Job[];
   tools: Tool[];

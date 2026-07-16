@@ -14,19 +14,9 @@ import {
 } from '@/components/ui/table';
 import { useDashboard } from '@/context/DashboardContext';
 
-const WORKERS = [
-  { id: 'w1', name: 'Marcus Rivera' },
-  { id: 'w2', name: 'Priya Nair' },
-  { id: 'w3', name: 'Devon Chang' },
-  { id: 'w4', name: 'Aisha Thompson' },
-  { id: 'w5', name: "Liam O'Brien" },
-  { id: 'w6', name: 'Sofia Morales' },
-  { id: 'w7', name: 'Trent Wallace' },
-  { id: 'w8', name: 'Keisha Fontaine' },
-];
-
 export function ToolInventoryTable({ hideAdd = false }: { hideAdd?: boolean } = {}) {
-  const { tools, isLoading, refresh } = useDashboard();
+  const { tools, isLoading, users, refresh } = useDashboard();
+  const WORKERS = users;
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [selectedWorker, setSelectedWorker] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState<Record<string, string>>({});
