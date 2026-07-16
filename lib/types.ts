@@ -83,3 +83,11 @@ export interface DashboardState {
   timesheets: TimeRecord[];
   kpis: KPIs;
 }
+
+// Authenticated user surfaced to the client via /api/me.
+export interface CurrentUser {
+  id: string;
+  name: string;
+  role: 'ceo' | 'manager' | 'worker';
+  avatarUrl?: string;
+}
