@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import dynamic from 'next/dynamic';
-import { PlusCircle, MapPin, Clock, User, Users, Loader2, CheckCircle2, BarChart2, CalendarClock, Wrench, Receipt, LogOut } from 'lucide-react';
+import { useState } from 'react';
+import { PlusCircle, MapPin, Clock, User, Users, Loader2, CheckCircle2, BarChart2, CalendarClock, Wrench, Receipt } from 'lucide-react';
 import { CEOView } from '@/components/dashboard/CEOView';
 import { ManagerView } from '@/components/dashboard/ManagerView';
 import { AgentView } from '@/components/dashboard/AgentView';
@@ -13,14 +12,6 @@ import { JobScheduler } from '@/components/dashboard/JobScheduler';
 import { InvoiceDashboard } from '@/components/dashboard/InvoiceDashboard';
 import { ToolInventoryHealthSection } from '@/components/dashboard/ToolInventoryHealthSection';
 import { Section } from '@/components/ui/section';
-import type { CurrentUser } from '@/lib/types';
-
-// The team chat is a client-only Vue web component; load it without SSR so
-// register()/customElements never runs on the server.
-const TeamChat = dynamic(
-  () => import('@/components/dashboard/TeamChat').then((m) => m.TeamChat),
-  { ssr: false }
-);
 
 type Tab = 'ceo' | 'manager' | 'agent' | 'timesheet' | 'scheduler';
 
@@ -252,14 +243,6 @@ function InvoiceBar() {
 
 function DashboardInner() {
   const [activeTab, setActiveTab] = useState<Tab>('ceo');
-  const [me, setMe] = useState<CurrentUser | null>(null);
-
-  useEffect(() => {
-    fetch('/api/me')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data: CurrentUser | null) => setMe(data))
-      .catch(() => {});
-  }, []);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -276,22 +259,7 @@ function DashboardInner() {
               <p className="mt-0.5 text-xs leading-none text-gray-400">Field Operations</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            {me && (
-              <div className="text-right">
-                <p className="text-xs font-medium leading-none text-gray-700">{me.name}</p>
-                <p className="mt-0.5 text-[10px] uppercase leading-none tracking-wide text-gray-400">{me.role}</p>
-              </div>
-            )}
-            <form action="/auth/signout" method="post">
-              <button
-                type="submit"
-                className="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-500 transition-colors hover:text-gray-800"
-              >
-                <LogOut className="h-3.5 w-3.5" /> Sign out
-              </button>
-            </form>
-          </div>
+          <span className="text-xs text-gray-400">Field Operations Dashboard</span>
         </div>
       </header>
 
@@ -376,9 +344,6 @@ function DashboardInner() {
       <footer className="border-t border-gray-200 py-4 text-center text-xs text-gray-400">
         Exotic Aquascape Field Operations
       </footer>
-
-      {/* Shared team chat — mounted once at the shell so it persists across every tab. */}
-      <TeamChat />
     </div>
   );
 }
