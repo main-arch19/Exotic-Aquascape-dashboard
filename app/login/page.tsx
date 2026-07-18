@@ -75,7 +75,7 @@ export default function LoginPage() {
         </h1>
         <p className="mb-6 text-sm text-gray-500">
           {mode === 'signin'
-            ? 'Sign in to access the team dashboard and chat.'
+            ? 'Sign in to access the team dashboard.'
             : 'Create an account to join the team dashboard.'}
         </p>
 
