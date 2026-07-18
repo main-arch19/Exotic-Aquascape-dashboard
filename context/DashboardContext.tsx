@@ -20,6 +20,7 @@ interface DashboardContextValue extends DashboardState {
 const DashboardContext = createContext<DashboardContextValue | null>(null);
 
 const EMPTY_STATE: DashboardState = {
+  users: [],
   workerStatuses: [],
   jobs: [],
   tools: [],
@@ -81,6 +82,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   // Subscribe to Pusher real-time updates
   useEffect(() => {
     const pusher = getPusherClient();
+    if (!pusher) return; // Pusher not configured — skip realtime, don't crash
     const channel = pusher.subscribe('dashboard');
 
     const handleStateChanged = () => {

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { Briefcase, Wrench, AlertTriangle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { useDashboard } from '@/context/DashboardContext';
 
 interface KPICardProps {
   label: string;
@@ -50,23 +51,24 @@ function KPICard({ label, value, icon, accent }: KPICardProps) {
 }
 
 export function KPICards() {
+  const { kpis } = useDashboard();
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
       <KPICard
         label="Active Jobs Today"
-        value={5}
+        value={kpis.activeJobs}
         icon={<Briefcase className="h-5 w-5 text-indigo-600" />}
         accent="bg-indigo-50"
       />
       <KPICard
         label="Tools Checked Out"
-        value={5}
+        value={kpis.toolsCheckedOut}
         icon={<Wrench className="h-5 w-5 text-sky-600" />}
         accent="bg-sky-50"
       />
       <KPICard
         label="Delays Reported"
-        value={5}
+        value={kpis.delaysToday}
         icon={<AlertTriangle className="h-5 w-5 text-amber-600" />}
         accent="bg-amber-50"
       />

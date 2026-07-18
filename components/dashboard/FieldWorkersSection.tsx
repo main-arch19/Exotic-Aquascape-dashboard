@@ -4,23 +4,8 @@ import { Users, MapPin, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-
-type JobState = 'arrived' | 'delayed' | 'leaving' | 'pending' | 'idle';
-type PunchStatus = 'clocked_in' | 'clocked_out';
-
-const EXAMPLES: {
-  id: string;
-  name: string;
-  punch: PunchStatus;
-  state: JobState;
-  location?: string;
-}[] = [
-  { id: 'w1', name: 'Marcus Rivera',   punch: 'clocked_in',  state: 'arrived',  location: '412 Coral Reef Dr'         },
-  { id: 'w2', name: 'Priya Nair',      punch: 'clocked_in',  state: 'arrived',  location: '412 Coral Reef Dr'         },
-  { id: 'w3', name: 'Devon Chang',     punch: 'clocked_in',  state: 'delayed'                                         },
-  { id: 'w7', name: 'Trent Wallace',   punch: 'clocked_in',  state: 'arrived',  location: '1801 Ocean Dr'             },
-  { id: 'w4', name: 'Aisha Thompson',  punch: 'clocked_in',  state: 'pending',  location: 'En route to Boca Raton'    },
-];
+import { useDashboard } from '@/context/DashboardContext';
+import { JobState } from '@/lib/types';
 
 function jobStateBadge(state: JobState) {
   switch (state) {
@@ -37,32 +22,38 @@ function initials(name: string) {
 }
 
 export function FieldWorkersSection() {
+  const { workerStatuses } = useDashboard();
+  const active = workerStatuses.filter((w) => w.punchStatus === 'clocked_in');
+
   return (
     <Card className="border-gray-200 bg-white shadow-sm">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-gray-500">
           <Users className="h-4 w-4 text-indigo-500" />
           Field Workers
-          <span className="ml-auto text-xs font-normal normal-case tracking-normal text-gray-400">{EXAMPLES.length} active</span>
+          <span className="ml-auto text-xs font-normal normal-case tracking-normal text-gray-400">{active.length} active</span>
         </CardTitle>
       </CardHeader>
       <Separator className="bg-gray-100" />
       <CardContent className="divide-y divide-gray-100 p-0">
-        {EXAMPLES.map((w) => (
-          <div key={w.id} className="flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors">
+        {active.length === 0 && (
+          <p className="py-8 text-center text-sm text-gray-400">No workers clocked in.</p>
+        )}
+        {active.map((w) => (
+          <div key={w.workerId} className="flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-semibold text-white">
-              {initials(w.name)}
+              {initials(w.workerName)}
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <p className="text-sm font-semibold text-gray-900">{w.name}</p>
-                {jobStateBadge(w.state)}
+                <p className="text-sm font-semibold text-gray-900">{w.workerName}</p>
+                {jobStateBadge(w.jobState)}
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-3">
-                <span className={`flex items-center gap-1 text-xs ${w.punch === 'clocked_in' ? 'text-emerald-600' : 'text-gray-400'}`}>
+                <span className={`flex items-center gap-1 text-xs ${w.punchStatus === 'clocked_in' ? 'text-emerald-600' : 'text-gray-400'}`}>
                   <Clock className="h-3 w-3 text-gray-300" />
-                  <span className={`inline-block h-1.5 w-1.5 rounded-full ${w.punch === 'clocked_in' ? 'bg-emerald-500' : 'bg-gray-300'}`} />
-                  {w.punch === 'clocked_in' ? 'Clocked In' : 'Off Clock'}
+                  <span className={`inline-block h-1.5 w-1.5 rounded-full ${w.punchStatus === 'clocked_in' ? 'bg-emerald-500' : 'bg-gray-300'}`} />
+                  {w.punchStatus === 'clocked_in' ? 'Clocked In' : 'Off Clock'}
                 </span>
                 {w.location && (
                   <span className="flex items-center gap-1 text-xs text-gray-400">

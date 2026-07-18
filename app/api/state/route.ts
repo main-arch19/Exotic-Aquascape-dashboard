@@ -18,7 +18,8 @@ export async function GET() {
     const supabase = await createServiceRoleClient();
 
     // Fetch all data from Supabase in parallel
-    const [workerStatusesRes, jobsRes, toolsRes, timesheetsRes] = await Promise.all([
+    const [usersRes, workerStatusesRes, jobsRes, toolsRes, timesheetsRes] = await Promise.all([
+      supabase.from('users').select('*'),
       supabase.from('worker_statuses').select('*'),
       supabase.from('jobs').select('*, jobs_workers(worker_id)'),
       supabase.from('tools').select('*'),
@@ -28,11 +29,20 @@ export async function GET() {
     // Supabase resolves { data, error } instead of throwing — a failed query would
     // otherwise be swallowed into an empty array and returned as a misleading 200.
     const queryError =
+      (usersRes.error && `users: ${usersRes.error.message}`) ||
       (workerStatusesRes.error && `worker_statuses: ${workerStatusesRes.error.message}`) ||
       (jobsRes.error && `jobs: ${jobsRes.error.message}`) ||
       (toolsRes.error && `tools: ${toolsRes.error.message}`) ||
       (timesheetsRes.error && `timesheets: ${timesheetsRes.error.message}`);
     if (queryError) throw new Error(queryError);
+
+    const users = (usersRes.data || []).map((u: any) => ({
+      id: u.id,
+      name: u.name,
+      role: u.role,
+      avatarUrl: u.avatar_url ?? undefined,
+      approved: u.approved ?? false,
+    }));
 
     const workerStatuses = (workerStatusesRes.data || []).map((w: any) => ({
       workerId: w.worker_id,
@@ -79,6 +89,7 @@ export async function GET() {
     const delaysToday = jobs.filter((j) => j.status === 'delayed').length;
 
     return NextResponse.json({
+      users,
       workerStatuses,
       jobs,
       tools,

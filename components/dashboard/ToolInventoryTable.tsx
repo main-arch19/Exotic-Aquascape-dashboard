@@ -14,19 +14,9 @@ import {
 } from '@/components/ui/table';
 import { useDashboard } from '@/context/DashboardContext';
 
-const WORKERS = [
-  { id: 'w1', name: 'Marcus Rivera' },
-  { id: 'w2', name: 'Priya Nair' },
-  { id: 'w3', name: 'Devon Chang' },
-  { id: 'w4', name: 'Aisha Thompson' },
-  { id: 'w5', name: "Liam O'Brien" },
-  { id: 'w6', name: 'Sofia Morales' },
-  { id: 'w7', name: 'Trent Wallace' },
-  { id: 'w8', name: 'Keisha Fontaine' },
-];
-
-export function ToolInventoryTable() {
-  const { tools, isLoading, refresh } = useDashboard();
+export function ToolInventoryTable({ hideAdd = false }: { hideAdd?: boolean } = {}) {
+  const { tools, isLoading, users, refresh } = useDashboard();
+  const WORKERS = users;
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [selectedWorker, setSelectedWorker] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState<Record<string, string>>({});
@@ -117,19 +107,21 @@ export function ToolInventoryTable() {
         <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-gray-500">
           <Wrench className="h-4 w-4 text-sky-500" />
           Tool Inventory
-          <div className="ml-auto flex items-center gap-2">
-            {createSuccess && (
-              <span className="flex items-center gap-1 text-xs font-normal normal-case tracking-normal text-emerald-600">
-                <CheckCircle2 className="h-3.5 w-3.5" />Tool added!
-              </span>
-            )}
-            <button
-              onClick={() => setShowForm((o) => !o)}
-              className="flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold normal-case tracking-normal text-indigo-700 transition-colors hover:bg-indigo-100"
-            >
-              {showForm ? <><ChevronUp className="h-3.5 w-3.5" />Cancel</> : <><PlusCircle className="h-3.5 w-3.5" />Add Tool</>}
-            </button>
-          </div>
+          {!hideAdd && (
+            <div className="ml-auto flex items-center gap-2">
+              {createSuccess && (
+                <span className="flex items-center gap-1 text-xs font-normal normal-case tracking-normal text-emerald-600">
+                  <CheckCircle2 className="h-3.5 w-3.5" />Tool added!
+                </span>
+              )}
+              <button
+                onClick={() => setShowForm((o) => !o)}
+                className="flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold normal-case tracking-normal text-indigo-700 transition-colors hover:bg-indigo-100"
+              >
+                {showForm ? <><ChevronUp className="h-3.5 w-3.5" />Cancel</> : <><PlusCircle className="h-3.5 w-3.5" />Add Tool</>}
+              </button>
+            </div>
+          )}
         </CardTitle>
       </CardHeader>
 

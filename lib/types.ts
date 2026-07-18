@@ -17,6 +17,7 @@ export interface User {
   name: string;
   role: 'ceo' | 'manager' | 'worker';
   avatarUrl?: string;
+  approved: boolean;
 }
 
 export interface WorkerStatus {
@@ -76,9 +77,19 @@ export interface KPIs {
 }
 
 export interface DashboardState {
+  users: User[];
   workerStatuses: WorkerStatus[];
   jobs: Job[];
   tools: Tool[];
   timesheets: TimeRecord[];
   kpis: KPIs;
+}
+
+// Authenticated user surfaced to the client via /api/me.
+export interface CurrentUser {
+  id: string;
+  name: string;
+  role: 'ceo' | 'manager' | 'worker';
+  avatarUrl?: string;
+  approved: boolean;
 }
