@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { PlusCircle, MapPin, Clock, User, Users, Loader2, CheckCircle2, BarChart2, CalendarClock, Wrench, Receipt, LogOut } from 'lucide-react';
 import { CEOView } from '@/components/dashboard/CEOView';
 import { ManagerView } from '@/components/dashboard/ManagerView';
@@ -288,30 +289,36 @@ function DashboardInner() {
     <div className="flex min-h-screen flex-col bg-background">
       <header className="sticky top-0 z-10 border-b border-gray-200 bg-white/90 shadow-sm backdrop-blur-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-3">
-            <img
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <Image
               src="/logo.jpeg"
               alt="Exotic Aquascape logo"
-              className="h-9 w-9 rounded-xl object-cover"
+              width={640}
+              height={640}
+              priority
+              className="h-9 w-9 shrink-0 rounded-xl object-contain"
             />
-            <div>
-              <p className="text-sm font-bold leading-none text-gray-900">Exotic Aquascape</p>
-              <p className="mt-0.5 text-xs leading-none text-gray-400">Field Operations</p>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-bold leading-none text-gray-900">Exotic Aquascape</p>
+              {/* Subtitle is the first thing to go on narrow phones. */}
+              <p className="mt-0.5 hidden text-xs leading-none text-gray-400 sm:block">Field Operations</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             {me && (
-              <div className="text-right">
-                <p className="text-xs font-medium leading-none text-gray-700">{me.name}</p>
+              <div className="min-w-0 text-right">
+                <p className="max-w-[7rem] truncate text-xs font-medium leading-none text-gray-700 sm:max-w-none">{me.name}</p>
                 <p className="mt-0.5 text-[10px] uppercase leading-none tracking-wide text-gray-400">{me.approved ? me.role : 'pending'}</p>
               </div>
             )}
             <form action="/auth/signout" method="post">
               <button
                 type="submit"
-                className="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-500 transition-colors hover:text-gray-800"
+                aria-label="Sign out"
+                className="flex min-h-10 min-w-10 items-center justify-center gap-1 rounded-lg border border-gray-200 px-2.5 text-xs font-medium text-gray-500 transition-colors hover:text-gray-800 sm:min-h-0 sm:min-w-0 sm:px-3 sm:py-1.5"
               >
-                <LogOut className="h-3.5 w-3.5" /> Sign out
+                <LogOut className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Sign out</span>
               </button>
             </form>
           </div>
@@ -334,7 +341,7 @@ function DashboardInner() {
                     key={tab}
                     type="button"
                     onClick={() => setActiveTab(tab)}
-                    className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-5 py-1.5 text-sm font-medium transition-colors ${
+                    className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors sm:px-5 sm:py-1.5 ${
                       activeTab === tab
                         ? 'bg-indigo-600 text-white shadow-sm'
                         : 'text-gray-500 hover:text-gray-800'

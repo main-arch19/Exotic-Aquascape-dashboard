@@ -31,6 +31,11 @@ export function UserApprovalBar() {
   return (
     <div className="mb-6">
       <Section
+        /* Section stores defaultOpen in useState, so it only reads it on mount —
+           and on first render `users` is still loading, making pending empty.
+           Keying on whether anyone is pending remounts the Section when that
+           flips, so a CEO arriving to real pending users sees them expanded. */
+        key={pending.length > 0 ? 'has-pending' : 'empty'}
         title={`Pending Approvals${pending.length ? ` (${pending.length})` : ''}`}
         icon={<UserCheck className="h-4 w-4" />}
         collapsible
@@ -54,6 +59,8 @@ export function UserApprovalBar() {
                     <p className="truncate text-sm font-semibold text-gray-900">{u.name}</p>
                     <p className="text-xs text-gray-400">Awaiting role assignment</p>
                   </div>
+                  {/* min-h-10 keeps these comfortably tappable on a phone; the
+                      denser desktop sizing returns at sm. */}
                   <div className="flex items-center gap-2">
                     <select
                       value={role}
@@ -61,7 +68,7 @@ export function UserApprovalBar() {
                         setRoleById((s) => ({ ...s, [u.id]: e.target.value as AssignRole }))
                       }
                       disabled={busy}
-                      className="rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                      className="min-h-10 flex-1 rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-indigo-400 sm:min-h-0 sm:flex-none"
                     >
                       <option value="worker">Agent</option>
                       <option value="manager">Manager</option>
@@ -70,7 +77,7 @@ export function UserApprovalBar() {
                       type="button"
                       onClick={() => act('/api/admin/approve', u.id, role)}
                       disabled={busy}
-                      className="flex items-center gap-1 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 disabled:opacity-60"
+                      className="flex min-h-10 items-center gap-1 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 disabled:opacity-60 sm:min-h-0"
                     >
                       {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                       Approve
@@ -80,7 +87,7 @@ export function UserApprovalBar() {
                       onClick={() => act('/api/admin/reject', u.id)}
                       disabled={busy}
                       aria-label={`Reject ${u.name}`}
-                      className="flex items-center justify-center rounded-md border border-gray-200 px-2 py-1.5 text-gray-400 transition-colors hover:border-red-200 hover:text-red-500 disabled:opacity-60"
+                      className="flex min-h-10 min-w-10 items-center justify-center rounded-md border border-gray-200 px-2 py-1.5 text-gray-400 transition-colors hover:border-red-200 hover:text-red-500 disabled:opacity-60 sm:min-h-0 sm:min-w-0"
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
