@@ -86,7 +86,7 @@ export function TimesheetView() {
             )}
             <button
               onClick={() => setShowForm((o) => !o)}
-              className="flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold normal-case tracking-normal text-indigo-700 transition-colors hover:bg-indigo-100"
+              className="flex min-h-10 items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold normal-case tracking-normal text-indigo-700 transition-colors hover:bg-indigo-100 sm:min-h-0"
             >
               {showForm ? <><ChevronUp className="h-3.5 w-3.5" />Cancel</> : <><PlusCircle className="h-3.5 w-3.5" />Add Entry</>}
             </button>
@@ -145,6 +145,51 @@ export function TimesheetView() {
 
       <Separator className="bg-gray-100" />
       <CardContent className="p-0">
+        {/* Phones: one card per record. Five columns can't be read on a 320px
+            screen without sideways scrolling, which is awkward one-handed in
+            the field. The table returns at sm and up. */}
+        <div className="space-y-2 p-3 sm:hidden">
+          {isLoading
+            ? Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="rounded-lg border border-gray-100 p-3">
+                  <Skeleton className="h-4 w-2/3 bg-gray-200" />
+                  <Skeleton className="mt-2 h-3 w-full bg-gray-200" />
+                </div>
+              ))
+            : sorted.map((record) => (
+                <div key={record.id} className="rounded-lg border border-gray-100 p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="min-w-0 truncate text-sm font-semibold text-gray-800">
+                      {record.workerName}
+                    </p>
+                    {record.punchOut
+                      ? <Badge className="shrink-0 border-0 bg-gray-100 text-gray-500">Complete</Badge>
+                      : <Badge className="shrink-0 border-0 bg-emerald-100 text-emerald-700">Active</Badge>}
+                  </div>
+                  <dl className="mt-2 grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <dt className="text-gray-400">In</dt>
+                      <dd className="mt-0.5 text-gray-600">{format(new Date(record.punchIn), 'h:mm a')}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-gray-400">Out</dt>
+                      <dd className="mt-0.5 text-gray-600">
+                        {record.punchOut ? format(new Date(record.punchOut), 'h:mm a') : '—'}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-gray-400">Hours</dt>
+                      <dd className="mt-0.5 font-medium text-gray-800">
+                        {record.totalHours != null ? `${record.totalHours.toFixed(2)}` : '—'}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+              ))}
+        </div>
+
+        {/* Table's own wrapper div takes no className, so gate it from outside. */}
+        <div className="hidden sm:block">
         <Table>
           <TableHeader>
             <TableRow className="border-gray-100 hover:bg-transparent">
@@ -179,6 +224,7 @@ export function TimesheetView() {
                 ))}
           </TableBody>
         </Table>
+        </div>
       </CardContent>
     </Card>
   );

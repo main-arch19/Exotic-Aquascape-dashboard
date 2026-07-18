@@ -13,6 +13,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { useDashboard } from '@/context/DashboardContext';
+import type { Tool } from '@/lib/types';
 
 export function ToolInventoryTable({ hideAdd = false }: { hideAdd?: boolean } = {}) {
   const { tools, isLoading, users, refresh } = useDashboard();
@@ -28,6 +29,52 @@ export function ToolInventoryTable({ hideAdd = false }: { hideAdd?: boolean } = 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [createSuccess, setCreateSuccess] = useState(false);
+
+  /* Shared by the mobile card list and the desktop table so the checkout
+     wiring exists in one place. A plain function, not a component, so React
+     doesn't remount the <select> and drop focus on every render. */
+  const renderToolActions = (tool: Tool, opts?: { full?: boolean }) => {
+    const isCheckedOut = tool.status === 'checked_out';
+    const busy = loadingId === tool.id;
+    const msg = feedback[tool.id];
+
+    return (
+      <div className={`flex items-center gap-2 ${opts?.full ? 'w-full' : ''}`}>
+        {msg && <span className="whitespace-nowrap text-xs font-medium text-indigo-600">{msg}</span>}
+        {isCheckedOut ? (
+          <button
+            disabled={busy}
+            onClick={() => handleReturn(tool.id, tool.checkedOutById ?? '')}
+            className={`flex items-center justify-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50 ${opts?.full ? 'w-full' : ''}`}
+          >
+            {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+            Return
+          </button>
+        ) : (
+          <div className={`flex items-center gap-1.5 ${opts?.full ? 'w-full' : ''}`}>
+            <select
+              value={selectedWorker[tool.id] ?? ''}
+              onChange={(e) => setSelectedWorker((s) => ({ ...s, [tool.id]: e.target.value }))}
+              className={`rounded-md border border-gray-200 bg-white py-1.5 pl-2 pr-6 text-xs text-gray-600 focus:outline-none focus:ring-1 focus:ring-indigo-400 ${opts?.full ? 'min-w-0 flex-1' : ''}`}
+            >
+              <option value="">Worker…</option>
+              {WORKERS.map((w) => (
+                <option key={w.id} value={w.id}>{w.name}</option>
+              ))}
+            </select>
+            <button
+              disabled={busy || !selectedWorker[tool.id]}
+              onClick={() => handleCheckout(tool.id)}
+              className="flex shrink-0 items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 disabled:opacity-50"
+            >
+              {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+              Check Out
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const setFeedbackTimed = (toolId: string, msg: string) => {
     setFeedback((f) => ({ ...f, [toolId]: msg }));
@@ -162,6 +209,45 @@ export function ToolInventoryTable({ hideAdd = false }: { hideAdd?: boolean } = 
 
       <Separator className="bg-gray-100" />
       <CardContent className="p-0">
+        {/* Phones: card per tool. Six columns including a select and a button
+            cannot fit a 320px screen; the table returns at sm and up. */}
+        <div className="space-y-2 p-3 sm:hidden">
+          {isLoading
+            ? Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="rounded-lg border border-gray-100 p-3">
+                  <Skeleton className="h-4 w-2/3 bg-gray-200" />
+                  <Skeleton className="mt-2 h-3 w-full bg-gray-200" />
+                </div>
+              ))
+            : tools.map((tool) => {
+                const isCheckedOut = tool.status === 'checked_out';
+                return (
+                  <div key={tool.id} className="rounded-lg border border-gray-100 p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-gray-800">{tool.name}</p>
+                        <p className="mt-0.5 truncate text-xs text-gray-400">{tool.category}</p>
+                      </div>
+                      {isCheckedOut
+                        ? <Badge className="shrink-0 border-0 bg-amber-100 text-amber-700">Checked Out</Badge>
+                        : <Badge className="shrink-0 border-0 bg-emerald-100 text-emerald-700">Available</Badge>}
+                    </div>
+
+                    {isCheckedOut && (
+                      <p className="mt-2 truncate text-xs text-gray-500">
+                        Held by {tool.checkedOutByName ?? '—'}
+                        {tool.checkedOutAt ? ` · since ${format(new Date(tool.checkedOutAt), 'h:mm a')}` : ''}
+                      </p>
+                    )}
+
+                    <div className="mt-3">{renderToolActions(tool, { full: true })}</div>
+                  </div>
+                );
+              })}
+        </div>
+
+        {/* Table's own wrapper div takes no className, so gate it from outside. */}
+        <div className="hidden sm:block">
         <Table>
           <TableHeader>
             <TableRow className="border-gray-100 hover:bg-transparent">
@@ -200,47 +286,13 @@ export function ToolInventoryTable({ hideAdd = false }: { hideAdd?: boolean } = 
                       <TableCell className="text-gray-400">
                         {tool.checkedOutAt ? format(new Date(tool.checkedOutAt), 'h:mm a') : '—'}
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {msg && <span className="text-xs font-medium text-indigo-600 whitespace-nowrap">{msg}</span>}
-                          {isCheckedOut ? (
-                            <button
-                              disabled={busy}
-                              onClick={() => handleReturn(tool.id, tool.checkedOutById ?? '')}
-                              className="flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50"
-                            >
-                              {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                              Return
-                            </button>
-                          ) : (
-                            <div className="flex items-center gap-1.5">
-                              <select
-                                value={selectedWorker[tool.id] ?? ''}
-                                onChange={(e) => setSelectedWorker((s) => ({ ...s, [tool.id]: e.target.value }))}
-                                className="rounded-md border border-gray-200 bg-white py-1 pl-2 pr-6 text-xs text-gray-600 focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                              >
-                                <option value="">Worker…</option>
-                                {WORKERS.map((w) => (
-                                  <option key={w.id} value={w.id}>{w.name}</option>
-                                ))}
-                              </select>
-                              <button
-                                disabled={busy || !selectedWorker[tool.id]}
-                                onClick={() => handleCheckout(tool.id)}
-                                className="flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 disabled:opacity-50"
-                              >
-                                {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                                Check Out
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
+                      <TableCell>{renderToolActions(tool)}</TableCell>
                     </TableRow>
                   );
                 })}
           </TableBody>
         </Table>
+        </div>
       </CardContent>
     </Card>
   );
