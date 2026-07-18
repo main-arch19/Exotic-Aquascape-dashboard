@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Loader2, LogIn, Mail, Lock, User } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -60,20 +61,44 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
-        <div className="mb-6 flex items-center gap-3">
-          <img src="/logo.jpeg" alt="Exotic Aquascape logo" className="h-10 w-10 rounded-xl object-cover" />
-          <div>
-            <p className="text-sm font-bold leading-none text-gray-900">Exotic Aquascape</p>
-            <p className="mt-0.5 text-xs leading-none text-gray-400">Field Operations</p>
+    <div className="relative flex min-h-screen items-center justify-center bg-background px-4">
+      {/* Ambient background wash. Decorative: fixed so it never affects layout,
+          clipped so the drifting blobs can't create scrollbars. */}
+      <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="drift-slow absolute -left-[15%] -top-[10%] h-[55vmax] w-[55vmax] rounded-full bg-[var(--primary)] opacity-[0.13] blur-[90px]" />
+        <div className="drift-slower absolute -bottom-[15%] -right-[20%] h-[50vmax] w-[50vmax] rounded-full bg-[var(--accent)] opacity-[0.10] blur-[100px]" />
+      </div>
+
+      {/* overflow-hidden guarantees the ripple rings can never escape the card. */}
+      <div className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
+        <div className="mb-6 flex flex-col items-center">
+          <div className="relative flex h-28 w-28 items-center justify-center">
+            {[0, 1.3, 2.6].map((delay) => (
+              <span
+                key={delay}
+                aria-hidden
+                className="ripple pointer-events-none absolute inset-0 rounded-full border border-[var(--primary)]"
+                style={{ animationDelay: `${delay}s` }}
+              />
+            ))}
+            <Image
+              src="/logo.jpeg"
+              alt="Exotic Aquascape"
+              width={640}
+              height={640}
+              priority
+              className="logo-float relative h-28 w-28 object-contain"
+            />
           </div>
+          <p className="mt-5 text-xs font-medium uppercase tracking-wider text-gray-400">
+            Field Operations
+          </p>
         </div>
 
-        <h1 className="mb-1 text-lg font-semibold text-gray-900">
+        <h1 className="mb-1 text-center text-lg font-semibold text-gray-900">
           {mode === 'signin' ? 'Sign in' : 'Create account'}
         </h1>
-        <p className="mb-6 text-sm text-gray-500">
+        <p className="mb-6 text-center text-sm text-gray-500">
           {mode === 'signin'
             ? 'Sign in to access the team dashboard.'
             : 'Create an account to join the team dashboard.'}
