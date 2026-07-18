@@ -1,9 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 
-// TEMP: login is paused — the whole app is reachable without signing in.
-// Set AUTH_PAUSED = false to re-activate the auth gate + session refresh.
-const AUTH_PAUSED = true;
+// Auth gate is active: unauthenticated visitors are redirected to /login and
+// sessions are refreshed on each request (required for the approval/role system).
+// Set AUTH_PAUSED = true to temporarily make the app reachable without signing in.
+const AUTH_PAUSED = false;
 
 // Next.js 16 renamed the `middleware` file convention to `proxy`. The exported
 // function must be named `proxy` (or be the default export).

@@ -12,9 +12,41 @@ import { JobScheduler } from '@/components/dashboard/JobScheduler';
 import { InvoiceDashboard } from '@/components/dashboard/InvoiceDashboard';
 import { ToolInventoryHealthSection } from '@/components/dashboard/ToolInventoryHealthSection';
 import { Section } from '@/components/ui/section';
+import { UserApprovalBar } from '@/components/dashboard/UserApprovalBar';
 import type { CurrentUser } from '@/lib/types';
 
 type Tab = 'ceo' | 'manager' | 'agent' | 'timesheet' | 'scheduler';
+
+const TAB_LABELS: Record<Tab, string> = {
+  ceo: 'CEO View',
+  manager: 'Manager View',
+  agent: 'Agent View',
+  timesheet: 'Timesheets',
+  scheduler: 'Job Scheduler',
+};
+
+// Which tabs each role may see. Agent (worker) and manager get only their own
+// view; the CEO sees everything plus the approval panel.
+function allowedTabsFor(role: CurrentUser['role']): Tab[] {
+  if (role === 'ceo') return ['ceo', 'manager', 'agent', 'timesheet', 'scheduler'];
+  if (role === 'manager') return ['manager'];
+  return ['agent'];
+}
+
+function PendingApproval({ name }: { name: string }) {
+  return (
+    <div className="mx-auto max-w-md py-20 text-center">
+      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-100">
+        <Clock className="h-6 w-6 text-amber-600" />
+      </div>
+      <h2 className="text-lg font-semibold text-gray-900">Waiting for approval</h2>
+      <p className="mt-2 text-sm text-gray-500">
+        Thanks, {name}. Your account is pending — the CEO will review your access and
+        assign your role shortly. Check back soon.
+      </p>
+    </div>
+  );
+}
 
 function QuickJobForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
   const { users, refresh } = useDashboard();
@@ -233,13 +265,24 @@ function InvoiceBar() {
 function DashboardInner() {
   const [activeTab, setActiveTab] = useState<Tab>('ceo');
   const [me, setMe] = useState<CurrentUser | null>(null);
+  const [meLoading, setMeLoading] = useState(true);
 
   useEffect(() => {
     fetch('/api/me')
       .then((r) => (r.ok ? r.json() : null))
       .then((data: CurrentUser | null) => setMe(data))
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setMeLoading(false));
   }, []);
+
+  const allowedTabs = me ? allowedTabsFor(me.role) : [];
+
+  // When the current user resolves, snap to a tab their role can actually see.
+  useEffect(() => {
+    if (!me) return;
+    const allowed = allowedTabsFor(me.role);
+    setActiveTab((cur) => (allowed.includes(cur) ? cur : allowed[0]));
+  }, [me]);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -260,7 +303,7 @@ function DashboardInner() {
             {me && (
               <div className="text-right">
                 <p className="text-xs font-medium leading-none text-gray-700">{me.name}</p>
-                <p className="mt-0.5 text-[10px] uppercase leading-none tracking-wide text-gray-400">{me.role}</p>
+                <p className="mt-0.5 text-[10px] uppercase leading-none tracking-wide text-gray-400">{me.approved ? me.role : 'pending'}</p>
               </div>
             )}
             <form action="/auth/signout" method="post">
@@ -276,81 +319,52 @@ function DashboardInner() {
       </header>
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">
-        <div className="mb-6">
-          <div className="flex gap-1 overflow-x-auto rounded-lg border border-gray-200 bg-white p-1 shadow-sm w-full sm:w-fit">
-            <button
-              type="button"
-              onClick={() => setActiveTab('ceo')}
-              className={`shrink-0 whitespace-nowrap rounded-md px-5 py-1.5 text-sm font-medium transition-colors ${
-                activeTab === 'ceo'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-gray-500 hover:text-gray-800'
-              }`}
-            >
-              CEO View
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('manager')}
-              className={`shrink-0 whitespace-nowrap rounded-md px-5 py-1.5 text-sm font-medium transition-colors ${
-                activeTab === 'manager'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-gray-500 hover:text-gray-800'
-              }`}
-            >
-              Manager View
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('agent')}
-              className={`shrink-0 whitespace-nowrap rounded-md px-5 py-1.5 text-sm font-medium transition-colors ${
-                activeTab === 'agent'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-gray-500 hover:text-gray-800'
-              }`}
-            >
-              Agent View
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('timesheet')}
-              className={`shrink-0 whitespace-nowrap rounded-md px-5 py-1.5 text-sm font-medium transition-colors ${
-                activeTab === 'timesheet'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-gray-500 hover:text-gray-800'
-              }`}
-            >
-              Timesheets
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('scheduler')}
-              className={`shrink-0 whitespace-nowrap flex items-center gap-1.5 rounded-md px-5 py-1.5 text-sm font-medium transition-colors ${
-                activeTab === 'scheduler'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-gray-500 hover:text-gray-800'
-              }`}
-            >
-              <CalendarClock className="h-3.5 w-3.5" />
-              Job Scheduler
-            </button>
+        {meLoading ? (
+          <div className="flex items-center justify-center py-24 text-gray-400">
+            <Loader2 className="h-5 w-5 animate-spin" />
           </div>
-        </div>
+        ) : me && !me.approved ? (
+          <PendingApproval name={me.name} />
+        ) : (
+          <>
+            <div className="mb-6">
+              <div className="flex gap-1 overflow-x-auto rounded-lg border border-gray-200 bg-white p-1 shadow-sm w-full sm:w-fit">
+                {allowedTabs.map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setActiveTab(tab)}
+                    className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-5 py-1.5 text-sm font-medium transition-colors ${
+                      activeTab === tab
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'text-gray-500 hover:text-gray-800'
+                    }`}
+                  >
+                    {tab === 'scheduler' && <CalendarClock className="h-3.5 w-3.5" />}
+                    {TAB_LABELS[tab]}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-        <QuickJobBar />
-        <div className="transition-opacity duration-300">
-          {(activeTab === 'ceo' || activeTab === 'scheduler') && <RevenueBar />}
-          {activeTab === 'ceo' && <InvoiceBar />}
-          {activeTab === 'ceo' && <ToolInventoryBar />}
-        </div>
+            {me?.role === 'ceo' && <UserApprovalBar />}
+            {me?.role !== 'worker' && <QuickJobBar />}
 
-        <div key={activeTab} className="transition-opacity duration-300 animate-in fade-in-0">
-          {activeTab === 'ceo' && <CEOView />}
-          {activeTab === 'manager' && <ManagerView />}
-          {activeTab === 'agent' && <AgentView />}
-          {activeTab === 'timesheet' && <TimesheetView />}
-          {activeTab === 'scheduler' && <JobScheduler />}
-        </div>
+            <div className="transition-opacity duration-300">
+              {(activeTab === 'ceo' || activeTab === 'scheduler') && <RevenueBar />}
+              {activeTab === 'ceo' && <InvoiceBar />}
+              {activeTab === 'ceo' && <ToolInventoryBar />}
+            </div>
+
+            <div key={activeTab} className="transition-opacity duration-300 animate-in fade-in-0">
+              {activeTab === 'ceo' && <CEOView />}
+              {activeTab === 'manager' && <ManagerView />}
+              {activeTab === 'agent' && <AgentView />}
+              {activeTab === 'timesheet' && <TimesheetView />}
+              {activeTab === 'scheduler' && <JobScheduler />}
+            </div>
+          </>
+        )}
       </main>
 
       <footer className="border-t border-gray-200 py-4 text-center text-xs text-gray-400">

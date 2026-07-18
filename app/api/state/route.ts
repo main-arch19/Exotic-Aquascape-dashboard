@@ -41,6 +41,7 @@ export async function GET() {
       name: u.name,
       role: u.role,
       avatarUrl: u.avatar_url ?? undefined,
+      approved: u.approved ?? false,
     }));
 
     const workerStatuses = (workerStatusesRes.data || []).map((w: any) => ({

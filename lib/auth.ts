@@ -4,12 +4,11 @@ import type { CurrentUser } from '@/lib/types';
 /**
  * Resolves the current authenticated user (verified via Supabase Auth cookies)
  * into a CurrentUser, ensuring a matching `users` row exists — keyed by the auth
- * uid — so chat messages have a stable sender profile. Returns null when the
- * request is unauthenticated.
+ * uid. The CEO seat is claimed by the first sign-in: if no CEO exists yet the new
+ * user becomes the single approved CEO; everyone after lands as pending
+ * (approved=false) until the CEO approves and assigns them a role.
  *
- * Auth is checked with the cookie-bound anon client (getUser revalidates the
- * token); the profile row is read/written with the service-role client to match
- * how the rest of the app accesses the database.
+ * Returns null when the request is unauthenticated.
  */
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   const supabase = await createClient();
@@ -22,7 +21,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   const { data: existing } = await service
     .from('users')
-    .select('id, name, role, avatar_url')
+    .select('id, name, role, avatar_url, approved')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -32,6 +31,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
       name: existing.name,
       role: existing.role,
       avatarUrl: existing.avatar_url ?? undefined,
+      approved: existing.approved ?? false,
     };
   }
 
@@ -41,16 +41,29 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     user.email?.split('@')[0] ||
     'User';
   const avatarUrl = (user.user_metadata?.avatar_url as string | undefined) ?? undefined;
+  const base = { id: user.id, name, avatar_url: avatarUrl ?? null };
 
-  await service.from('users').upsert(
-    {
-      id: user.id,
-      name,
-      role: 'worker',
-      avatar_url: avatarUrl ?? null,
-    },
-    { onConflict: 'id' }
-  );
+  // Claim the open CEO seat if it's still empty.
+  const { data: ceo } = await service
+    .from('users')
+    .select('id')
+    .eq('role', 'ceo')
+    .limit(1)
+    .maybeSingle();
 
-  return { id: user.id, name, role: 'worker', avatarUrl };
+  if (!ceo) {
+    const { error } = await service
+      .from('users')
+      .insert({ ...base, role: 'ceo', approved: true });
+    if (!error) {
+      return { id: user.id, name, role: 'ceo', avatarUrl, approved: true };
+    }
+    // Lost the race for the single-CEO seat — fall through to pending.
+  }
+
+  await service
+    .from('users')
+    .upsert({ ...base, role: 'worker', approved: false }, { onConflict: 'id' });
+
+  return { id: user.id, name, role: 'worker', avatarUrl, approved: false };
 }

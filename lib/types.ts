@@ -17,6 +17,7 @@ export interface User {
   name: string;
   role: 'ceo' | 'manager' | 'worker';
   avatarUrl?: string;
+  approved: boolean;
 }
 
 export interface WorkerStatus {
@@ -90,4 +91,5 @@ export interface CurrentUser {
   name: string;
   role: 'ceo' | 'manager' | 'worker';
   avatarUrl?: string;
+  approved: boolean;
 }
