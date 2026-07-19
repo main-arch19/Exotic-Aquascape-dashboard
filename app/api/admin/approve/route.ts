@@ -3,8 +3,11 @@ import { getCurrentUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { triggerUpdate } from '@/lib/pusher-server';
 
-// Approve a pending user and assign a role. CEO only. Only 'manager' and
-// 'worker' (agent) are assignable — the single CEO seat can't be handed out here.
+// Assign a role. CEO only. Only 'manager' and 'worker' (agent) are assignable —
+// the single CEO seat can't be handed out here.
+//
+// Serves three cases with the same write: approving a pending sign-up, changing
+// an already-approved member's role, and restoring someone previously revoked.
 export async function POST(req: NextRequest) {
   const me = await getCurrentUser();
   if (!me || !me.approved || me.role !== 'ceo') {
@@ -26,10 +29,12 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = await createServiceRoleClient();
+  // Clearing `revoked` is what makes this double as a restore.
   const { error } = await supabase
     .from('users')
-    .update({ role, approved: true })
-    .eq('id', userId);
+    .update({ role, approved: true, revoked: false })
+    .eq('id', userId)
+    .neq('role', 'ceo');
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

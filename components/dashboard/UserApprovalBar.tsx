@@ -4,29 +4,22 @@ import { useState } from 'react';
 import { UserCheck, Check, X, Loader2 } from 'lucide-react';
 import { Section } from '@/components/ui/section';
 import { useDashboard } from '@/context/DashboardContext';
+import { useAdminAction } from '@/lib/use-admin-action';
 
 type AssignRole = 'worker' | 'manager';
 
 export function UserApprovalBar() {
-  const { users, refresh } = useDashboard();
-  const pending = users.filter((u) => !u.approved);
+  const { users } = useDashboard();
+  const { run, busyId, error } = useAdminAction();
+
+  // Revoked members also have approved === false, but they belong in the Team
+  // panel's "Removed" list, not in the new-sign-up queue.
+  const pending = users.filter((u) => !u.approved && !u.revoked);
 
   const [roleById, setRoleById] = useState<Record<string, AssignRole>>({});
-  const [busyId, setBusyId] = useState<string | null>(null);
 
-  const act = async (path: string, userId: string, role?: AssignRole) => {
-    setBusyId(userId);
-    try {
-      await fetch(path, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(role ? { userId, role } : { userId }),
-      });
-      await refresh();
-    } finally {
-      setBusyId(null);
-    }
-  };
+  const act = (path: string, userId: string, role?: AssignRole) =>
+    run(path, role ? { userId, role } : { userId });
 
   return (
     <div className="mb-6">
@@ -43,6 +36,9 @@ export function UserApprovalBar() {
         accent="amber"
         hover
       >
+        {error && (
+          <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
+        )}
         {pending.length === 0 ? (
           <p className="py-2 text-sm text-gray-400">No one is waiting for approval.</p>
         ) : (

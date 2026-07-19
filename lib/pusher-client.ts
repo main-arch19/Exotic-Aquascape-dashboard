@@ -16,7 +16,13 @@ export function getPusherClient(): PusherJs | null {
   if (!key || !cluster) return null;
 
   if (!pusherClient) {
-    pusherClient = new PusherJs(key, { cluster });
+    // authEndpoint is only invoked for private-/presence- channels, so this is
+    // inert for the existing public `dashboard` subscription. Same-origin, so
+    // the Supabase session cookie rides along with no extra config.
+    pusherClient = new PusherJs(key, {
+      cluster,
+      authEndpoint: '/api/pusher/auth',
+    });
   }
   return pusherClient;
 }
