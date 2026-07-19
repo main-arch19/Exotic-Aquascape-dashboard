@@ -42,6 +42,7 @@ export async function GET() {
       role: u.role,
       avatarUrl: u.avatar_url ?? undefined,
       approved: u.approved ?? false,
+      revoked: u.revoked ?? false,
     }));
 
     const workerStatuses = (workerStatusesRes.data || []).map((w: any) => ({

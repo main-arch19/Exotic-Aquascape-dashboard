@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { PlusCircle, MapPin, Clock, User, Users, Loader2, CheckCircle2, BarChart2, CalendarClock, Wrench, Receipt, LogOut } from 'lucide-react';
+import { PlusCircle, MapPin, Clock, User, Users, Loader2, CheckCircle2, BarChart2, CalendarClock, Wrench, Receipt, LogOut, Radio } from 'lucide-react';
 import { CEOView } from '@/components/dashboard/CEOView';
 import { ManagerView } from '@/components/dashboard/ManagerView';
 import { AgentView } from '@/components/dashboard/AgentView';
@@ -14,9 +14,11 @@ import { InvoiceDashboard } from '@/components/dashboard/InvoiceDashboard';
 import { ToolInventoryHealthSection } from '@/components/dashboard/ToolInventoryHealthSection';
 import { Section } from '@/components/ui/section';
 import { UserApprovalBar } from '@/components/dashboard/UserApprovalBar';
+import { TeamRolesBar } from '@/components/dashboard/TeamRolesBar';
+import { TrackingMonitor } from '@/components/tracking/TrackingMonitor';
 import type { CurrentUser } from '@/lib/types';
 
-type Tab = 'ceo' | 'manager' | 'agent' | 'timesheet' | 'scheduler';
+type Tab = 'ceo' | 'manager' | 'agent' | 'timesheet' | 'scheduler' | 'tracking';
 
 const TAB_LABELS: Record<Tab, string> = {
   ceo: 'CEO View',
@@ -24,13 +26,21 @@ const TAB_LABELS: Record<Tab, string> = {
   agent: 'Agent View',
   timesheet: 'Timesheets',
   scheduler: 'Job Scheduler',
+  tracking: 'Live Tracking',
 };
 
 // Which tabs each role may see. Agent (worker) and manager get only their own
 // view; the CEO sees everything plus the approval panel.
+//
+// This hides a tab; it does not secure anything. A worker is kept out of live
+// tracking by three independent server-side guards: /api/trips returns only
+// their own rows under RLS, /api/pusher/auth refuses to sign a subscription for
+// role 'worker', and the location_pings policies scope every read. Do not
+// mistake this list for an access-control boundary.
 function allowedTabsFor(role: CurrentUser['role']): Tab[] {
-  if (role === 'ceo') return ['ceo', 'manager', 'agent', 'timesheet', 'scheduler'];
-  if (role === 'manager') return ['manager'];
+  if (role === 'ceo')
+    return ['ceo', 'manager', 'agent', 'timesheet', 'scheduler', 'tracking'];
+  if (role === 'manager') return ['manager', 'tracking'];
   return ['agent'];
 }
 
@@ -348,14 +358,22 @@ function DashboardInner() {
                     }`}
                   >
                     {tab === 'scheduler' && <CalendarClock className="h-3.5 w-3.5" />}
+                    {tab === 'tracking' && <Radio className="h-3.5 w-3.5" />}
                     {TAB_LABELS[tab]}
                   </button>
                 ))}
               </div>
             </div>
 
-            {me?.role === 'ceo' && <UserApprovalBar />}
-            {me?.role !== 'worker' && <QuickJobBar />}
+            {/* Access administration lives on the CEO tab only — the other tabs
+                stay focused on field work. */}
+            {me?.role === 'ceo' && activeTab === 'ceo' && (
+              <>
+                <UserApprovalBar />
+                <TeamRolesBar currentUserId={me.id} />
+              </>
+            )}
+            {me?.role !== 'worker' && activeTab !== 'tracking' && <QuickJobBar />}
 
             <div className="transition-opacity duration-300">
               {(activeTab === 'ceo' || activeTab === 'scheduler') && <RevenueBar />}
@@ -369,6 +387,7 @@ function DashboardInner() {
               {activeTab === 'agent' && <AgentView />}
               {activeTab === 'timesheet' && <TimesheetView />}
               {activeTab === 'scheduler' && <JobScheduler />}
+              {activeTab === 'tracking' && <TrackingMonitor />}
             </div>
           </>
         )}

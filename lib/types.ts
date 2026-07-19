@@ -10,7 +10,11 @@ export type EventType =
   | 'delayed'
   | 'tool_checkout'
   | 'tool_return'
-  | 'job_created';
+  | 'job_created'
+  // Must stay in sync with the event_logs_type_check constraint rebuilt in
+  // migration 006 — an unlisted value fails the insert at runtime.
+  | 'trip_started'
+  | 'trip_ended';
 
 export interface User {
   id: string;
@@ -18,6 +22,9 @@ export interface User {
   role: 'ceo' | 'manager' | 'worker';
   avatarUrl?: string;
   approved: boolean;
+  // Removed by the CEO. Distinguishes a departed member from a new sign-up
+  // awaiting approval — both have approved === false.
+  revoked: boolean;
 }
 
 export interface WorkerStatus {
