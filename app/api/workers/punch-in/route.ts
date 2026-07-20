@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { triggerUpdate } from '@/lib/pusher-server';
+import { requireApproved, resolveTarget } from '@/app/api/jobs/shared';
 
 export async function POST(req: NextRequest) {
-  const { workerId } = await req.json();
+  const { workerId: bodyWorkerId } = await req.json();
 
   try {
+    const guard = await requireApproved();
+    if (!guard.ok) return guard.response;
+    // An agent can only clock themselves in; a manager may clock in a named
+    // agent. The body's workerId is ignored for agents.
+    const workerId = resolveTarget(guard.me, bodyWorkerId);
+
     const supabase = await createServiceRoleClient();
 
     const workerRes = await supabase

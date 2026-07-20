@@ -1,14 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { sendPushNotification } from '@/lib/onesignal';
 import { sendEmail } from '@/lib/resend';
 import { triggerUpdate } from '@/lib/pusher-server';
+import { newId, requireApproved, resolveTarget } from '../shared';
 
 export async function POST(req: NextRequest) {
-  const { jobId, workerId, location } = await req.json();
+  const { jobId, workerId: bodyWorkerId, location } = await req.json();
 
   try {
+    const guard = await requireApproved();
+    if (!guard.ok) return guard.response;
+    const { me } = guard;
+
+    // An agent can only act as themselves; a manager may record an arrival for a
+    // named agent (useful when the agent's phone has died).
+    const workerId = resolveTarget(me, bodyWorkerId);
+
     const supabase = await createServiceRoleClient();
+
+    // The job must actually be assigned to and accepted by this agent. Without
+    // this an agent could mark anyone's job arrived.
+    const { data: assignment } = await supabase
+      .from('jobs_workers')
+      .select('accepted_at')
+      .eq('job_id', jobId)
+      .eq('worker_id', workerId)
+      .maybeSingle();
+    if (!assignment?.accepted_at) {
+      return NextResponse.json(
+        { error: 'That job has not been accepted by this agent' },
+        { status: 403 }
+      );
+    }
 
     const jobRes = await supabase.from('jobs').select('*').eq('id', jobId).single();
     const workerRes = await supabase
@@ -35,7 +58,7 @@ export async function POST(req: NextRequest) {
       .eq('worker_id', workerId);
 
     await supabase.from('event_logs').insert({
-      id: Math.random().toString(36).slice(2, 10),
+      id: newId(),
       timestamp: new Date().toISOString(),
       type: 'arrived',
       worker_id: workerId,
@@ -45,11 +68,11 @@ export async function POST(req: NextRequest) {
       severity: 'success',
     });
 
-    await sendPushNotification(
-      'Your Exotic Aquascape cleaning team has arrived! 🐠',
-      job.homeowner_name
-    );
-
+    // The homeowner push was removed: sendPushNotification had no targeting, so
+    // OneSignal fell back to the default segment and every "your team has
+    // arrived" went to every subscriber. Homeowners are not users and have no
+    // OneSignal identity, so there is no correct target — the email below is
+    // the properly addressed channel.
     if (job.homeowner_email) {
       await sendEmail(
         job.homeowner_email,

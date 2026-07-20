@@ -10,10 +10,24 @@ function initials(name: string) {
   return name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
 }
 
-export function WorkerClockPanel() {
-  const { workerStatuses, refresh } = useDashboard();
+/**
+ * `selfOnly` is required on the agent surface, not cosmetic. This panel used to
+ * render every worker_statuses row and let an agent clock ANYONE in or out; the
+ * punch routes now reject that, so without the filter an agent would see a wall
+ * of buttons that all fail.
+ */
+export function WorkerClockPanel({ selfOnly = false }: { selfOnly?: boolean } = {}) {
+  const { workerStatuses, users, me, refresh } = useDashboard();
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<Record<string, string>>({});
+
+  // Migration 007 backfills a worker_statuses row for EVERY user, including
+  // managers and the CEO, so the dispatcher view has to filter to field agents
+  // or they show up here as clockable workers.
+  const roleById = new Map(users.map((u) => [u.id, u.role]));
+  const visibleStatuses = selfOnly
+    ? workerStatuses.filter((ws) => ws.workerId === me?.id)
+    : workerStatuses.filter((ws) => roleById.get(ws.workerId) === 'worker');
 
   const handleClock = async (workerId: string, action: 'punch-in' | 'punch-out') => {
     setLoadingId(workerId);
@@ -43,12 +57,12 @@ export function WorkerClockPanel() {
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-gray-500">
           <UserCheck className="h-4 w-4 text-indigo-500" />
-          Worker Clock Management
+          {selfOnly ? 'My Time Clock' : 'Worker Clock Management'}
         </CardTitle>
       </CardHeader>
       <Separator className="bg-gray-100" />
       <CardContent className="divide-y divide-gray-100 p-0">
-        {workerStatuses.map((ws) => {
+        {visibleStatuses.map((ws) => {
           const isLoading = loadingId === ws.workerId;
           const msg = feedback[ws.workerId];
           const isClockedIn = ws.punchStatus === 'clocked_in';

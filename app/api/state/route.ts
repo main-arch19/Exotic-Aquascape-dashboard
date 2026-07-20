@@ -21,7 +21,9 @@ export async function GET() {
     const [usersRes, workerStatusesRes, jobsRes, toolsRes, timesheetsRes] = await Promise.all([
       supabase.from('users').select('*'),
       supabase.from('worker_statuses').select('*'),
-      supabase.from('jobs').select('*, jobs_workers(worker_id)'),
+      supabase
+        .from('jobs')
+        .select('*, jobs_workers(worker_id, assigned_at, accepted_at, assigned_by)'),
       supabase.from('tools').select('*'),
       supabase.from('timesheets').select('*'),
     ]);
@@ -54,6 +56,16 @@ export async function GET() {
       location: w.location ?? undefined,
     }));
 
+    // Shape of the embedded jobs_workers rows. Typed rather than `any` so the
+    // acceptance fields can't drift silently — the surrounding `any` usage in
+    // this file predates the assignment work.
+    interface JobWorkerRow {
+      worker_id: string;
+      assigned_at: string | null;
+      accepted_at: string | null;
+      assigned_by: string | null;
+    }
+
     const jobs = (jobsRes.data || []).map((job: any) => ({
       id: job.id,
       homeownerName: job.homeowner_name,
@@ -62,7 +74,19 @@ export async function GET() {
       status: job.status,
       createdAt: job.created_at,
       homeownerEmail: job.homeowner_email ?? undefined,
-      assignedWorkerIds: job.jobs_workers?.map((jw: any) => jw.worker_id) || [],
+      managerId: job.manager_id ?? undefined,
+      // Kept for the read-only surfaces that still index on it.
+      assignedWorkerIds:
+        job.jobs_workers?.map((jw: JobWorkerRow) => jw.worker_id) || [],
+      // acceptedAt is the authoritative acceptance record — worker_statuses
+      // .job_state is only a display convenience.
+      assignments:
+        job.jobs_workers?.map((jw: JobWorkerRow) => ({
+          workerId: jw.worker_id,
+          assignedAt: jw.assigned_at ?? null,
+          acceptedAt: jw.accepted_at ?? null,
+          assignedBy: jw.assigned_by ?? null,
+        })) || [],
     }));
 
     const tools = (toolsRes.data || []).map((tool: any) => ({

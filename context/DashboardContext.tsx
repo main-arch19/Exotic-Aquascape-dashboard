@@ -8,13 +8,16 @@ import {
   useRef,
   useState,
 } from 'react';
-import { DashboardState, EventLog } from '@/lib/types';
+import { CurrentUser, DashboardState, EventLog } from '@/lib/types';
 import { getPusherClient } from '@/lib/pusher-client';
 
 interface DashboardContextValue extends DashboardState {
   events: EventLog[];
   refresh: () => Promise<void>;
   isLoading: boolean;
+  /** The signed-in user. Null while loading, or if the session is gone. */
+  me: CurrentUser | null;
+  meLoading: boolean;
 }
 
 const DashboardContext = createContext<DashboardContextValue | null>(null);
@@ -33,6 +36,19 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const [events, setEvents] = useState<EventLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const seenIds = useRef<Set<string>>(new Set());
+
+  // The current user lives here rather than in the page, because the agent job
+  // list and the assignment UI both need to know who is acting.
+  const [me, setMe] = useState<CurrentUser | null>(null);
+  const [meLoading, setMeLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/me')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: CurrentUser | null) => setMe(data))
+      .catch(() => {})
+      .finally(() => setMeLoading(false));
+  }, []);
 
   const fetchState = useCallback(async () => {
     try {
@@ -99,7 +115,9 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   }, [fetchState, fetchFeed]);
 
   return (
-    <DashboardContext.Provider value={{ ...state, events, refresh, isLoading }}>
+    <DashboardContext.Provider
+      value={{ ...state, events, refresh, isLoading, me, meLoading }}
+    >
       {children}
     </DashboardContext.Provider>
   );

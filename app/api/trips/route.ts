@@ -109,7 +109,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // scope=mine — the caller's own active trip, for TripControlPanel. The
+    // scope=mine — the caller's own active trip, for TrackingSessionProvider. The
     // worker never needs to know its own user id: RLS resolves it.
     if (scope === 'mine') {
       const { data, error } = await supabase
@@ -136,6 +136,17 @@ export async function GET(req: NextRequest) {
     const rows = (tripRows ?? []) as TripRow[];
     const now = Date.now();
 
+    // job_state tells us who is on site. An agent who has arrived is expected to
+    // go quiet — the browser cannot track a pocketed phone — so that must not
+    // read as a stale trip.
+    const { data: statusRows } = await supabase
+      .from('worker_statuses')
+      .select('worker_id, job_state')
+      .in('worker_id', rows.map((r) => r.worker_id));
+    const jobStateByWorker = new Map(
+      (statusRows ?? []).map((s) => [s.worker_id, s.job_state as string])
+    );
+
     const trips: TripDTO[] = await Promise.all(
       rows.map(async (row) => {
         const { data: lastRows } = await supabase
@@ -147,16 +158,21 @@ export async function GET(req: NextRequest) {
 
         const last = (lastRows ?? [])[0] as PingRow | undefined;
         const lastAt = last ? new Date(last.captured_at).getTime() : null;
+        const onSite = jobStateByWorker.get(row.worker_id) === 'arrived';
+
+        const silent =
+          lastAt === null
+            ? now - new Date(row.started_at).getTime() > STALE_AFTER_MS
+            : now - lastAt > STALE_AFTER_MS;
 
         return {
           ...tripRowToDTO(row),
           lastPing: last ? pingRowToDTO(last) : null,
+          onSite,
           // Computed here so the UI can offer "Force end" without a background
-          // job watching for abandoned trips.
-          isStale:
-            lastAt === null
-              ? now - new Date(row.started_at).getTime() > STALE_AFTER_MS
-              : now - lastAt > STALE_AFTER_MS,
+          // job watching for abandoned trips. On-site silence is expected, so it
+          // is reported as onSite rather than as a problem.
+          isStale: silent && !onSite,
         };
       })
     );

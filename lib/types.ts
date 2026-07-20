@@ -11,10 +11,13 @@ export type EventType =
   | 'tool_checkout'
   | 'tool_return'
   | 'job_created'
-  // Must stay in sync with the event_logs_type_check constraint rebuilt in
-  // migration 006 — an unlisted value fails the insert at runtime.
+  // Must stay in sync with the event_logs_type_check constraint, last rebuilt in
+  // migration 007 — an unlisted value fails the insert at runtime.
   | 'trip_started'
-  | 'trip_ended';
+  | 'trip_ended'
+  | 'job_assigned'
+  | 'job_unassigned'
+  | 'job_accepted';
 
 export interface User {
   id: string;
@@ -36,12 +39,27 @@ export interface WorkerStatus {
   location?: string;
 }
 
+// One agent's assignment to one job. `acceptedAt` is the AUTHORITATIVE record of
+// acceptance — worker_statuses.job_state is only a display convenience, since it
+// is single-valued per worker while assignment is many-to-many per job.
+export interface JobAssignment {
+  workerId: string;
+  assignedAt: string | null;
+  acceptedAt: string | null;
+  assignedBy: string | null;
+}
+
 export interface Job {
   id: string;
   homeownerName: string;
   address: string;
   scheduledTime: string;
+  // Kept alongside `assignments` because ActiveJobsSection and other read-only
+  // surfaces still index on it.
   assignedWorkerIds: string[];
+  assignments: JobAssignment[];
+  // The owning manager, distinct from the field agents in `assignments`.
+  managerId?: string;
   status: JobStatus;
   createdAt: string;
   homeownerEmail?: string;

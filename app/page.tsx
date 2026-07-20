@@ -85,11 +85,20 @@ function QuickJobForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: 
     if (!validate()) return;
     setSubmitting(true);
     try {
-      const assignedWorkerIds = [managerId, workerId].filter(Boolean);
+      // The manager goes in jobs.manager_id, NOT jobs_workers. Both used to be
+      // flattened into the junction, which would now give the manager an
+      // assignment push, an Accept button, and GPS tracking on themselves.
+      const assignedWorkerIds = [workerId].filter(Boolean);
       await fetch('/api/jobs/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ homeownerName: homeowner, address, scheduledTime: arrivalTime, assignedWorkerIds }),
+        body: JSON.stringify({
+          homeownerName: homeowner,
+          address,
+          scheduledTime: arrivalTime,
+          assignedWorkerIds,
+          managerId: managerId || null,
+        }),
       });
       await refresh();
       onSuccess();
@@ -275,16 +284,10 @@ function InvoiceBar() {
 
 function DashboardInner() {
   const [activeTab, setActiveTab] = useState<Tab>('ceo');
-  const [me, setMe] = useState<CurrentUser | null>(null);
-  const [meLoading, setMeLoading] = useState(true);
-
-  useEffect(() => {
-    fetch('/api/me')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data: CurrentUser | null) => setMe(data))
-      .catch(() => {})
-      .finally(() => setMeLoading(false));
-  }, []);
+  // `me` comes from the dashboard context now — the agent job list and the
+  // assignment UI both need it, so it lives in one place instead of being
+  // fetched separately here.
+  const { me, meLoading } = useDashboard();
 
   const allowedTabs = me ? allowedTabsFor(me.role) : [];
 

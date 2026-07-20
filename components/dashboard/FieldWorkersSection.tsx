@@ -22,8 +22,13 @@ function initials(name: string) {
 }
 
 export function FieldWorkersSection() {
-  const { workerStatuses } = useDashboard();
-  const active = workerStatuses.filter((w) => w.punchStatus === 'clocked_in');
+  const { workerStatuses, users } = useDashboard();
+  // Migration 007 backfills a worker_statuses row for every user, so filter to
+  // actual field agents or managers and the CEO appear here as field workers.
+  const roleById = new Map(users.map((u) => [u.id, u.role]));
+  const active = workerStatuses.filter(
+    (w) => w.punchStatus === 'clocked_in' && roleById.get(w.workerId) === 'worker'
+  );
 
   return (
     <Card className="border-gray-200 bg-white shadow-sm">

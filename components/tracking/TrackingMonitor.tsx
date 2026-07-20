@@ -207,10 +207,21 @@ export function TrackingMonitor() {
                       <span className="truncate text-sm font-semibold text-foreground">
                         {t.workerName}
                       </span>
-                      {t.isStale && (
-                        <span className="shrink-0 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
-                          Stale
+                      {/* On site is reported separately from stale. An agent who
+                          has arrived is EXPECTED to go quiet — a browser cannot
+                          track a pocketed phone — and flagging that as a problem
+                          would train managers to ignore the stale warning on the
+                          drives where it actually means something. */}
+                      {t.onSite ? (
+                        <span className="shrink-0 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">
+                          On site
                         </span>
+                      ) : (
+                        t.isStale && (
+                          <span className="shrink-0 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+                            Stale
+                          </span>
+                        )
                       )}
                     </div>
                     <p className="truncate text-xs text-muted-foreground">
@@ -234,6 +245,11 @@ export function TrackingMonitor() {
                         </span>
                       )}
                     </div>
+                    {t.onSite && (
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        Sharing pauses while the phone is away — this is normal.
+                      </p>
+                    )}
                     {t.isStale && (
                       <span
                         role="button"

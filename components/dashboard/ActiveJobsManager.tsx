@@ -1,13 +1,23 @@
 'use client';
 
 import { useState } from 'react';
-import { Briefcase, MapPin, Clock, Users, Loader2, PlusCircle, ChevronUp, CheckCircle2, Home, LogOut, AlertTriangle, X } from 'lucide-react';
+import {
+  Briefcase,
+  MapPin,
+  Clock,
+  Loader2,
+  Home,
+  LogOut,
+  AlertTriangle,
+  X,
+  UserPlus,
+  CheckCircle2,
+  BellOff,
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
 import { useDashboard } from '@/context/DashboardContext';
 import { JobStatus } from '@/lib/types';
 
@@ -20,134 +30,114 @@ function statusBadge(status: JobStatus) {
   }
 }
 
-export function ActiveJobsManager({ hideAdd = false }: { hideAdd?: boolean } = {}) {
-  const { jobs, workerStatuses, users, refresh } = useDashboard();
-  const WORKERS = users;
+/**
+ * Dispatcher view of active jobs: assign agents, and record arrive/leave/delay
+ * on an agent's behalf when their phone has died.
+ *
+ * Job CREATION lives in QuickJobBar (app/page.tsx), not here. This component
+ * used to carry a second, buggier creation form that was unreachable behind
+ * `hideAdd` but still live in the tree — it has been removed rather than gated.
+ *
+ * Every action names the agent explicitly. It previously sent
+ * `assignedWorkerIds[0] ?? 'w1'`, which attributed a manager's action to
+ * whichever assignee happened to sort first — often the wrong person, and after
+ * the manager_id split, often a manager rather than an agent.
+ */
+export function ActiveJobsManager() {
+  const { jobs, users, refresh } = useDashboard();
 
-  // Create form state
-  const [showForm, setShowForm] = useState(false);
-  const [homeownerName, setHomeownerName] = useState('');
-  const [address, setAddress] = useState('');
-  const [scheduledTime, setScheduledTime] = useState('');
-  const [selectedWorkers, setSelectedWorkers] = useState<string[]>([]);
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [submitting, setSubmitting] = useState(false);
-  const [createSuccess, setCreateSuccess] = useState(false);
-
-  // Job action state
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<Record<string, string>>({});
   const [delayInput, setDelayInput] = useState<Record<string, string>>({});
+  const [assignOpen, setAssignOpen] = useState<string | null>(null);
+
+  const agents = users.filter((u) => u.role === 'worker' && u.approved && !u.revoked);
+  const nameById = new Map(users.map((u) => [u.id, u.name]));
 
   const setFeedbackTimed = (jobId: string, msg: string) => {
     setFeedback((f) => ({ ...f, [jobId]: msg }));
-    setTimeout(() => setFeedback((f) => { const n = { ...f }; delete n[jobId]; return n; }), 3000);
+    setTimeout(() => setFeedback((f) => { const n = { ...f }; delete n[jobId]; return n; }), 4000);
   };
 
-  const toggleWorker = (id: string) =>
-    setSelectedWorkers((prev) => prev.includes(id) ? prev.filter((w) => w !== id) : [...prev, id]);
-
-  const validateForm = () => {
-    const errs: Record<string, string> = {};
-    if (homeownerName.trim().length < 2) errs.homeownerName = 'Name is required';
-    if (address.trim().length < 5) errs.address = 'Address is required';
-    if (!scheduledTime) errs.scheduledTime = 'Time is required';
-    setFormErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
-
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-    setSubmitting(true);
+  const call = async (
+    url: string,
+    body: Record<string, unknown>,
+    key: string,
+    jobId: string,
+    okMsg: string
+  ) => {
+    setActionLoading(key);
     try {
-      await fetch('/api/jobs/create', {
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ homeownerName, address, scheduledTime, assignedWorkerIds: selectedWorkers }),
+        body: JSON.stringify(body),
       });
-      setHomeownerName('');
-      setAddress('');
-      setScheduledTime('');
-      setSelectedWorkers([]);
-      setFormErrors({});
-      setShowForm(false);
-      setCreateSuccess(true);
+      const data = await res.json();
+      if (!res.ok) {
+        setFeedbackTimed(jobId, data.error ?? 'Error');
+        return null;
+      }
+      setFeedbackTimed(jobId, okMsg);
       await refresh();
-      setTimeout(() => setCreateSuccess(false), 3000);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleArrive = async (jobId: string) => {
-    const job = jobs.find((j) => j.id === jobId);
-    if (!job) return;
-    setActionLoading(`${jobId}-arrive`);
-    try {
-      const res = await fetch('/api/jobs/arrive', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobId, workerId: job.assignedWorkerIds[0] ?? 'w1', location: job.address }),
-      });
-      const data = await res.json();
-      setFeedbackTimed(jobId, res.ok ? "We're on property!" : (data.error ?? 'Error'));
-      if (res.ok) await refresh();
+      return data;
     } finally {
       setActionLoading(null);
     }
   };
 
-  const handleLeave = async (jobId: string) => {
-    const job = jobs.find((j) => j.id === jobId);
-    if (!job) return;
-    setActionLoading(`${jobId}-leave`);
-    try {
-      const res = await fetch('/api/jobs/leave', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobId, workerId: job.assignedWorkerIds[0] ?? 'w1' }),
-      });
-      const data = await res.json();
-      setFeedbackTimed(jobId, res.ok ? 'Leaving property!' : (data.error ?? 'Error'));
-      if (res.ok) await refresh();
-    } finally {
-      setActionLoading(null);
+  const handleAssign = async (jobId: string, workerId: string) => {
+    const data = await call(
+      '/api/jobs/assign',
+      { jobId, workerId },
+      `${jobId}-assign`,
+      jobId,
+      'Assigned'
+    );
+    setAssignOpen(null);
+    // The agent is only reachable by push if they've enabled notifications.
+    // Say so, so the dispatcher knows to phone them instead of assuming.
+    if (data && data.pushDelivered === false) {
+      setFeedbackTimed(jobId, 'Assigned — push not delivered (notifications are off on their device)');
     }
   };
 
-  const openDelayInput = (jobId: string) => {
-    setDelayInput((prev) => ({ ...prev, [jobId]: '' }));
+  const handleUnassign = async (jobId: string, workerId: string, accepted: boolean) => {
+    if (accepted) {
+      const name = nameById.get(workerId) ?? 'This agent';
+      if (
+        !window.confirm(
+          `${name} has accepted and may be en route. Unassigning will end their location sharing.`
+        )
+      ) {
+        return;
+      }
+    }
+    await call(
+      '/api/jobs/unassign',
+      { jobId, workerId },
+      `${jobId}-unassign-${workerId}`,
+      jobId,
+      'Removed from job'
+    );
   };
 
-  const closeDelayInput = (jobId: string) => {
-    setDelayInput((prev) => {
-      const next = { ...prev };
-      delete next[jobId];
-      return next;
-    });
-  };
-
-  const handleDelaySubmit = async (jobId: string) => {
+  const handleDelaySubmit = async (jobId: string, workerId: string) => {
     const reason = delayInput[jobId]?.trim();
     if (!reason) return;
-    const job = jobs.find((j) => j.id === jobId);
-    if (!job) return;
-    setActionLoading(`${jobId}-delay`);
-    try {
-      const res = await fetch('/api/delay', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workerId: job.assignedWorkerIds[0] ?? 'w1', reason }),
+    const ok = await call(
+      '/api/delay',
+      { workerId, reason },
+      `${jobId}-delay`,
+      jobId,
+      'Delay reported'
+    );
+    if (ok) {
+      setDelayInput((prev) => {
+        const next = { ...prev };
+        delete next[jobId];
+        return next;
       });
-      const data = await res.json();
-      setFeedbackTimed(jobId, res.ok ? 'Delay reported!' : (data.error ?? 'Error'));
-      if (res.ok) {
-        closeDelayInput(jobId);
-        await refresh();
-      }
-    } finally {
-      setActionLoading(null);
     }
   };
 
@@ -159,107 +149,31 @@ export function ActiveJobsManager({ hideAdd = false }: { hideAdd?: boolean } = {
         <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-gray-500">
           <Briefcase className="h-4 w-4 text-indigo-500" />
           Active Jobs Today
-          <span className="text-xs font-normal normal-case tracking-normal text-gray-400">{activeJobs.length} jobs</span>
-          {!hideAdd && (
-            <div className="ml-auto flex items-center gap-2">
-              {createSuccess && (
-                <span className="flex items-center gap-1 text-xs font-normal normal-case tracking-normal text-emerald-600">
-                  <CheckCircle2 className="h-3.5 w-3.5" />Job created!
-                </span>
-              )}
-              <button
-                onClick={() => setShowForm((o) => !o)}
-                className="flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold normal-case tracking-normal text-indigo-700 transition-colors hover:bg-indigo-100"
-              >
-                {showForm ? <><ChevronUp className="h-3.5 w-3.5" />Cancel</> : <><PlusCircle className="h-3.5 w-3.5" />New Job</>}
-              </button>
-            </div>
-          )}
+          <span className="text-xs font-normal normal-case tracking-normal text-gray-400">
+            {activeJobs.length} jobs
+          </span>
         </CardTitle>
       </CardHeader>
-
-      {showForm && (
-        <>
-          <Separator className="bg-gray-100" />
-          <CardContent className="pt-5">
-            <form onSubmit={onSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-gray-500">Homeowner Name</Label>
-                  <input
-                    value={homeownerName}
-                    onChange={(e) => setHomeownerName(e.target.value)}
-                    placeholder="e.g. Jane Smith"
-                    className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                  />
-                  {formErrors.homeownerName && <p className="text-xs text-red-500">{formErrors.homeownerName}</p>}
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-gray-500">Scheduled Time</Label>
-                  <input
-                    type="datetime-local"
-                    value={scheduledTime}
-                    onChange={(e) => setScheduledTime(e.target.value)}
-                    className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                  />
-                  {formErrors.scheduledTime && <p className="text-xs text-red-500">{formErrors.scheduledTime}</p>}
-                </div>
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label className="text-xs text-gray-500">Service Address</Label>
-                  <input
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="e.g. 412 Coral Reef Dr, Miami FL"
-                    className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                  />
-                  {formErrors.address && <p className="text-xs text-red-500">{formErrors.address}</p>}
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label className="text-xs text-gray-500">Assign Workers</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {WORKERS.map((w) => (
-                      <button
-                        key={w.id}
-                        type="button"
-                        onClick={() => toggleWorker(w.id)}
-                        className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                          selectedWorkers.includes(w.id)
-                            ? 'border-indigo-400 bg-indigo-50 text-indigo-700'
-                            : 'border-gray-300 bg-gray-50 text-gray-600 hover:border-gray-400'
-                        }`}
-                      >
-                        {w.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <Button type="submit" disabled={submitting} className="bg-indigo-600 text-white hover:bg-indigo-500">
-                {submitting ? 'Creating…' : 'Create Job'}
-              </Button>
-            </form>
-          </CardContent>
-        </>
-      )}
 
       <Separator className="bg-gray-100" />
       <CardContent className="divide-y divide-gray-100 p-0">
         {activeJobs.length === 0 && (
-          <p className="p-6 text-center text-sm text-gray-400">No active jobs — create one above</p>
+          <p className="p-6 text-center text-sm text-gray-400">
+            No active jobs — create one with the New Job bar above
+          </p>
         )}
         {activeJobs.map((job) => {
-          const isDone = job.status === 'completed';
           const msg = feedback[job.id];
           const delayOpen = job.id in delayInput;
-          const assignedNames = job.assignedWorkerIds
-            .map((id) => workerStatuses.find((w) => w.workerId === id)?.workerName ?? id)
-            .join(', ');
+          const unassigned = agents.filter(
+            (a) => !job.assignments.some((as) => as.workerId === a.id)
+          );
 
           return (
-            <div key={job.id} className="flex flex-col gap-3 p-4 hover:bg-gray-50 transition-colors">
-              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+            <div key={job.id} className="flex flex-col gap-3 p-4 transition-colors hover:bg-gray-50">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0 flex-1 space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex flex-wrap items-center gap-2">
                     <p className="text-sm font-semibold text-gray-900">{job.homeownerName}</p>
                     {statusBadge(job.status)}
                     {msg && <span className="text-xs font-medium text-indigo-600">{msg}</span>}
@@ -267,63 +181,194 @@ export function ActiveJobsManager({ hideAdd = false }: { hideAdd?: boolean } = {
                   <div className="flex flex-wrap gap-3 text-xs text-gray-400">
                     <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{job.address}</span>
                     <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{format(new Date(job.scheduledTime), 'h:mm a')}</span>
-                    {assignedNames && <span className="flex items-center gap-1"><Users className="h-3 w-3" />{assignedNames}</span>}
                   </div>
                 </div>
+              </div>
 
-                {!isDone && (
-                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                    <button
-                      disabled={!!actionLoading}
-                      onClick={() => handleArrive(job.id)}
-                      className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:opacity-40 disabled:cursor-not-allowed"
+              {/* Assigned agents, each with its acceptance state */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                {job.assignments.length === 0 && (
+                  <span className="text-xs text-gray-400">No agent assigned yet</span>
+                )}
+                {job.assignments.map((a) => {
+                  const accepted = Boolean(a.acceptedAt);
+                  return (
+                    <span
+                      key={a.workerId}
+                      className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${
+                        accepted
+                          ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                          : 'border-gray-300 bg-gray-50 text-gray-600'
+                      }`}
                     >
-                      {actionLoading === `${job.id}-arrive` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Home className="h-3.5 w-3.5" />}
-                      Arrive
-                    </button>
+                      {accepted ? (
+                        <CheckCircle2 className="h-3 w-3 shrink-0" />
+                      ) : (
+                        <Clock className="h-3 w-3 shrink-0" />
+                      )}
+                      {nameById.get(a.workerId) ?? a.workerId}
+                      <span className="opacity-70">
+                        {accepted
+                          ? `accepted ${format(new Date(a.acceptedAt!), 'h:mm a')}`
+                          : 'awaiting acceptance'}
+                      </span>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${nameById.get(a.workerId) ?? 'agent'} from this job`}
+                        disabled={!!actionLoading}
+                        onClick={() => handleUnassign(job.id, a.workerId, accepted)}
+                        className="shrink-0 opacity-60 transition-opacity hover:opacity-100"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  );
+                })}
+
+                {unassigned.length > 0 && (
+                  <div className="relative">
                     <button
+                      type="button"
                       disabled={!!actionLoading}
-                      onClick={() => handleLeave(job.id)}
-                      className="flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700 transition-colors hover:bg-sky-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                      onClick={() => setAssignOpen(assignOpen === job.id ? null : job.id)}
+                      className="flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 disabled:opacity-40"
                     >
-                      {actionLoading === `${job.id}-leave` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LogOut className="h-3.5 w-3.5" />}
-                      Leave
+                      {actionLoading === `${job.id}-assign` ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <UserPlus className="h-3 w-3" />
+                      )}
+                      Assign
                     </button>
-                    <button
-                      disabled={!!actionLoading}
-                      onClick={() => delayOpen ? closeDelayInput(job.id) : openDelayInput(job.id)}
-                      className="flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-100 disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      <AlertTriangle className="h-3.5 w-3.5" />
-                      Delayed
-                    </button>
+                    {assignOpen === job.id && (
+                      <div className="absolute left-0 top-full z-10 mt-1 min-w-44 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+                        {unassigned.map((a) => (
+                          <button
+                            key={a.id}
+                            type="button"
+                            onClick={() => handleAssign(job.id, a.id)}
+                            className="block w-full px-3 py-1.5 text-left text-xs text-gray-700 transition-colors hover:bg-gray-50"
+                          >
+                            {a.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
 
-              {delayOpen && (
-                <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2">
-                  <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
-                  <input
-                    autoFocus
-                    placeholder="Reason for delay…"
-                    value={delayInput[job.id]}
-                    onChange={(e) => setDelayInput((d) => ({ ...d, [job.id]: e.target.value }))}
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleDelaySubmit(job.id); }}
-                    className="min-w-0 flex-1 bg-transparent text-xs text-amber-900 placeholder:text-amber-400 outline-none"
-                  />
-                  <button
-                    disabled={!delayInput[job.id]?.trim() || actionLoading === `${job.id}-delay`}
-                    onClick={() => handleDelaySubmit(job.id)}
-                    className="shrink-0 rounded-md bg-amber-500 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed"
+              {/* One action row per ACCEPTED agent. A manager can record these on
+                  an agent's behalf; the server accepts an explicit workerId from
+                  a dispatcher but ignores it from an agent. */}
+              {job.assignments
+                .filter((a) => a.acceptedAt)
+                .map((a) => (
+                  <div
+                    key={`actions-${a.workerId}`}
+                    className="flex flex-wrap items-center gap-2 rounded-lg bg-gray-50 px-2.5 py-2"
                   >
-                    {actionLoading === `${job.id}-delay` ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Submit'}
-                  </button>
-                  <button onClick={() => closeDelayInput(job.id)} className="shrink-0 text-amber-400 hover:text-amber-600">
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              )}
+                    <span className="text-xs font-medium text-gray-500">
+                      {nameById.get(a.workerId) ?? a.workerId}:
+                    </span>
+                    <button
+                      disabled={!!actionLoading}
+                      onClick={() =>
+                        call(
+                          '/api/jobs/arrive',
+                          { jobId: job.id, workerId: a.workerId, location: job.address },
+                          `${job.id}-arrive-${a.workerId}`,
+                          job.id,
+                          'Marked arrived'
+                        )
+                      }
+                      className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {actionLoading === `${job.id}-arrive-${a.workerId}` ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Home className="h-3.5 w-3.5" />
+                      )}
+                      Arrive
+                    </button>
+                    <button
+                      disabled={!!actionLoading}
+                      onClick={() =>
+                        call(
+                          '/api/jobs/leave',
+                          { jobId: job.id, workerId: a.workerId },
+                          `${job.id}-leave-${a.workerId}`,
+                          job.id,
+                          'Marked complete'
+                        )
+                      }
+                      className="flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700 transition-colors hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {actionLoading === `${job.id}-leave-${a.workerId}` ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <LogOut className="h-3.5 w-3.5" />
+                      )}
+                      Complete
+                    </button>
+                    <button
+                      disabled={!!actionLoading}
+                      onClick={() =>
+                        delayOpen
+                          ? setDelayInput((prev) => {
+                              const next = { ...prev };
+                              delete next[job.id];
+                              return next;
+                            })
+                          : setDelayInput((prev) => ({ ...prev, [job.id]: '' }))
+                      }
+                      className="flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      Delayed
+                    </button>
+
+                    {delayOpen && (
+                      <div className="flex w-full items-center gap-2 rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2">
+                        <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                        <input
+                          autoFocus
+                          placeholder="Reason for delay…"
+                          value={delayInput[job.id]}
+                          onChange={(e) =>
+                            setDelayInput((d) => ({ ...d, [job.id]: e.target.value }))
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleDelaySubmit(job.id, a.workerId);
+                          }}
+                          className="min-w-0 flex-1 bg-transparent text-xs text-amber-900 outline-none placeholder:text-amber-400"
+                        />
+                        <button
+                          disabled={
+                            !delayInput[job.id]?.trim() ||
+                            actionLoading === `${job.id}-delay`
+                          }
+                          onClick={() => handleDelaySubmit(job.id, a.workerId)}
+                          className="shrink-0 rounded-md bg-amber-500 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          {actionLoading === `${job.id}-delay` ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            'Submit'
+                          )}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+              {job.assignments.length > 0 &&
+                job.assignments.every((a) => !a.acceptedAt) && (
+                  <p className="flex items-center gap-1.5 text-xs text-gray-400">
+                    <BellOff className="h-3 w-3" />
+                    Waiting for the agent to accept — location sharing starts then.
+                  </p>
+                )}
             </div>
           );
         })}

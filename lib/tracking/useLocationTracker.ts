@@ -18,7 +18,9 @@ const DEFAULTS = {
   minDistanceM: 75,
   maxAccuracyM: 200,
   stationaryHeartbeatMs: 60_000,
-  stationaryRadiusM: 15,
+  // 40m, not 15m. Consumer GPS drifts 5-30m while genuinely stationary, and
+  // worse beside a building — a radius under that classifies noise as movement.
+  stationaryRadiusM: 40,
   flushIntervalMs: 20_000,
   batchSize: 50,
   backoffMinMs: 2_000,
@@ -64,6 +66,9 @@ export function useLocationTracker(
 
   // Gate state — refs, not state, so updating them never triggers a render.
   const lastAcceptedRef = useRef<Ping | null>(null);
+  // Where the worker was when they were first judged stationary. Distinct from
+  // lastAcceptedRef, which advances on every accepted ping — see acceptPing.
+  const stationaryAnchorRef = useRef<Ping | null>(null);
 
   if (sourceRef.current === null) {
     sourceRef.current = opts.source ?? createWebSource();
@@ -177,19 +182,40 @@ export function useLocationTracker(
       const byDistance = distance >= cfg.minDistanceM;
       if (!byInterval && !byDistance) return false;
 
-      // 3. Stationary suppression. A worker parked at a job site still trips the
-      //    interval branch every 8s, which is ~450 rows/hour of the same
-      //    coordinate. Suppressing that drops a parked worker to ~60/hour — a 7x
-      //    reduction with zero loss of route fidelity, and it is the difference
-      //    between filling the Supabase free tier in 10 weeks and not.
-      if (
-        !byDistance &&
-        distance < cfg.stationaryRadiusM &&
-        elapsed < cfg.stationaryHeartbeatMs
-      ) {
-        return false;
+      // 3. Stationary suppression, measured from a fixed ANCHOR rather than from
+      //    the last accepted ping.
+      //
+      //    This distinction is load-bearing. If we compared against
+      //    lastAcceptedRef — which advances every time a ping is accepted — a
+      //    phone drifting just under the radius per fix would never trip the
+      //    distance guard and never trip the interval guard, so the gate would
+      //    happily record a slow fake "walk" around the property that never
+      //    happened. Anchoring means drift has to genuinely leave the radius
+      //    before we call it movement.
+      //
+      //    Matters more now that tracking runs through on-site time: a worker
+      //    parked for three hours would otherwise emit ~450 rows/hour of noise
+      //    instead of ~60.
+      const anchor = stationaryAnchorRef.current ?? prev;
+      const distanceFromAnchor = haversineM(anchor, ping);
+
+      if (distanceFromAnchor < cfg.stationaryRadiusM) {
+        if (stationaryAnchorRef.current === null) {
+          stationaryAnchorRef.current = prev;
+        }
+        // Still within the anchor radius: only the heartbeat gets through.
+        const sinceAnchor =
+          new Date(ping.capturedAt).getTime() -
+          new Date(stationaryAnchorRef.current.capturedAt).getTime();
+        if (sinceAnchor < cfg.stationaryHeartbeatMs) return false;
+        // Heartbeat fires: re-anchor so the next window is measured from here.
+        stationaryAnchorRef.current = ping;
+        return true;
       }
 
+      // Genuinely moved beyond the radius — drop the anchor and resume normal
+      // interval/distance gating.
+      stationaryAnchorRef.current = null;
       return true;
     },
     [
@@ -219,6 +245,7 @@ export function useLocationTracker(
       tripIdRef.current = tripId;
       queueRef.current = new PingQueue(tripId);
       lastAcceptedRef.current = null;
+      stationaryAnchorRef.current = null;
       backoffRef.current = cfg.backoffMinMs;
       setError(null);
       setStatus('requesting');
@@ -262,6 +289,7 @@ export function useLocationTracker(
     queueRef.current = null;
     tripIdRef.current = null;
     lastAcceptedRef.current = null;
+    stationaryAnchorRef.current = null;
     setStatus('idle');
     setLastPing(null);
     setQueuedCount(0);

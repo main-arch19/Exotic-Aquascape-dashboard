@@ -79,8 +79,17 @@ export interface TripDTO {
   startedAt: string;
   endedAt: string | null;
   endReason: 'worker' | 'manager' | 'auto_timeout' | null;
-  /** Server-computed: active but silent for over 30 minutes. */
+  /**
+   * Server-computed: active, silent for over 30 minutes, AND not on site.
+   *
+   * The on-site exclusion matters. Tracking now runs through the whole job, and
+   * a phone in a pocket produces nothing, so without it every agent on site
+   * would be permanently flagged — training managers to ignore the warning
+   * including on the drives where it actually means something.
+   */
   isStale?: boolean;
+  /** Arrived at the worksite: sharing is expected to be quiet, not broken. */
+  onSite?: boolean;
   /** Most recent fix, when the endpoint includes one. */
   lastPing?: Ping | null;
 }
@@ -102,9 +111,16 @@ export interface TripEndedEvent {
 }
 
 /**
- * Bumping this re-prompts every worker for consent. Do that whenever the
- * ConsentDialog copy materially changes — the version is recorded per trip in
- * field_trips.consent_version, so old trips keep the text that was actually
- * shown at the time.
+ * Version of the location-sharing notice.
+ *
+ * Bumping this re-prompts everyone (CONSENT_STORAGE_KEY is templated on it) and
+ * the server rejects an accept carrying a stale version, so nobody can record
+ * acknowledgment of text they were never shown. field_trips.consent_version
+ * pins each trip to the notice actually displayed at the time.
+ *
+ * v1 -> v2: tracking is no longer a drive the worker chose to start. It now runs
+ * from accepting a dispatched job until the job is marked complete — including
+ * time on site — and it is a condition of accepting the work rather than
+ * something the worker can switch off.
  */
-export const CONSENT_VERSION = 'v1';
+export const CONSENT_VERSION = 'v2';

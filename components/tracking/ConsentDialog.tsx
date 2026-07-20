@@ -1,6 +1,6 @@
 'use client';
 
-import { MapPin, Eye, Clock, Trash2 } from 'lucide-react';
+import { MapPin, Eye, Clock, Trash2, SignalHigh } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,7 +14,7 @@ import { CONSENT_VERSION } from '@/lib/tracking/types';
 
 export const CONSENT_STORAGE_KEY = `ea:tracking:consent:${CONSENT_VERSION}`;
 
-export function hasStoredConsent(): boolean {
+export function hasSeenNotice(): boolean {
   if (typeof window === 'undefined') return false;
   try {
     return window.localStorage.getItem(CONSENT_STORAGE_KEY) !== null;
@@ -23,31 +23,44 @@ export function hasStoredConsent(): boolean {
   }
 }
 
-export function storeConsent() {
+export function markNoticeSeen() {
   try {
     window.localStorage.setItem(CONSENT_STORAGE_KEY, new Date().toISOString());
   } catch {
     // Storage disabled. The per-trip DB record is the one that matters; this
-    // only means the worker will be asked again next time.
+    // only means the agent sees the notice again next time.
   }
 }
 
 interface ConsentDialogProps {
   open: boolean;
-  onAgree: () => void;
+  jobLabel?: string;
+  onAccept: () => void;
   onCancel: () => void;
 }
 
 /**
- * One-time consent gate.
+ * Location-sharing DISCLOSURE NOTICE, shown once per notice version before an
+ * agent's first job acceptance.
  *
- * Consent is recorded twice, deliberately: localStorage controls whether this
- * modal appears (a UX concern), while field_trips.consent_granted_at +
- * consent_version is the durable per-trip record (a legal one). "They affirmed
- * consent at 09:04 on this specific trip" is a far stronger artifact than "they
- * ticked a box once in March."
+ * This is deliberately not framed as consent. Sharing is a condition of
+ * accepting dispatched work and the agent cannot switch it off mid-job, so
+ * calling it consent — and offering an "I agree" button over a mechanism with no
+ * withdrawal — would misdescribe what is happening. What the agent does here is
+ * read the terms and choose whether to take the job.
+ *
+ * The record is still kept twice: localStorage decides whether this dialog
+ * appears (UX), while field_trips.consent_granted_at + consent_version is the
+ * durable per-trip record of which notice text was actually shown (the artifact
+ * that matters if this is ever questioned). The server rejects an accept
+ * carrying a stale version, so the two cannot drift.
  */
-export function ConsentDialog({ open, onAgree, onCancel }: ConsentDialogProps) {
+export function ConsentDialog({
+  open,
+  jobLabel,
+  onAccept,
+  onCancel,
+}: ConsentDialogProps) {
   const points = [
     {
       icon: MapPin,
@@ -57,12 +70,17 @@ export function ConsentDialog({ open, onAgree, onCancel }: ConsentDialogProps) {
     {
       icon: Clock,
       title: 'When',
-      body: 'Only while a trip you started is running. Ending the trip stops it immediately. Nothing is collected off the clock.',
+      body: 'From the moment you accept a job until you mark it complete — the drive there and your time on site. Nothing is collected before you accept, after you complete, or while you’re clocked out.',
+    },
+    {
+      icon: SignalHigh,
+      title: 'How well it works',
+      body: 'This only works while the app is open on your screen. If you lock your phone or switch apps, sharing pauses and there will be gaps in your route.',
     },
     {
       icon: Eye,
       title: 'Who can see it',
-      body: 'Managers and the CEO. Other field workers cannot see your location.',
+      body: 'Managers and the CEO. Other field agents cannot see your location.',
     },
     {
       icon: Trash2,
@@ -77,17 +95,16 @@ export function ConsentDialog({ open, onAgree, onCancel }: ConsentDialogProps) {
       onOpenChange={(next) => {
         if (!next) onCancel();
       }}
-      // No click-away dismissal: this is an affirmative consent gate, and a
-      // modal you can wave away by tapping the backdrop is not consent. Escape
-      // still closes, which routes to onCancel and simply starts no trip —
-      // failing closed is the correct outcome for a consent prompt.
+      // No click-away dismissal. Escape still closes, which routes to onCancel
+      // and simply starts no trip — failing closed is the right outcome.
       disablePointerDismissal
     >
       <DialogContent showCloseButton={false} className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Share your location during trips</DialogTitle>
+          <DialogTitle>Location sharing on dispatched jobs</DialogTitle>
           <DialogDescription>
-            Before your first trip, here is exactly what this does.
+            Sharing your location is part of accepting a dispatched job. If you
+            accept, it runs until you mark the job complete.
           </DialogDescription>
         </DialogHeader>
 
@@ -106,16 +123,18 @@ export function ConsentDialog({ open, onAgree, onCancel }: ConsentDialogProps) {
         </ul>
 
         <p className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
-          You can end a trip at any time, and location sharing stops the moment you
-          do. While a trip is running you will always see an indicator at the top of
-          your screen.
+          If you can’t take this job, don’t accept it — speak to your manager and
+          they’ll reassign it.
         </p>
 
         <DialogFooter>
           <Button variant="ghost" onClick={onCancel}>
             Not now
           </Button>
-          <Button onClick={onAgree}>I agree</Button>
+          {/* Names the action it performs, rather than a bare "I agree". */}
+          <Button onClick={onAccept}>
+            {jobLabel ? 'Accept job & start sharing' : 'Accept & start sharing'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
